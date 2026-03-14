@@ -1,7 +1,7 @@
 {
   "name": "naas-engine",
-  "version": "1.0.0",
+  "type": "module",
   "dependencies": {
-    "mongodb": "^6.0.0"
+    "@tidbcloud/serverless": "^0.1.0"
   }
 }
