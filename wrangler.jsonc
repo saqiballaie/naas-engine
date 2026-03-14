@@ -1,6 +1,11 @@
 {
-  "name": "naas-engine-api",
+  "name": "naas-engine",
   "main": "src/index.js",
   "compatibility_date": "2026-03-14",
-  "compatibility_flags": [ "nodejs_compat" ]
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true
+  }
 }
