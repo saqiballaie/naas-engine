@@ -1,36 +1,119 @@
 export function renderSearchBody(searchTerm, min, max, latestYear, results, isSearchSubmitted) {
+  // Safely serialize results for the CSV Export script
+  const safeResults = JSON.stringify(results || []).replace(/</g, '\\u003c').replace(/`/g, '\\`');
+
   return `
+    <style>
+        .quick-filters { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
+        .filter-chip { background: var(--primary-light); color: var(--primary); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid rgba(0, 86, 179, 0.2); transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .filter-chip:hover { background: var(--primary); color: white; border-color: var(--primary); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .trust-badge { display: inline-flex; align-items: center; gap: 6px; background: #e8f5e9; color: var(--success); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 20px; border: 1px solid #c3e6cb; }
+    </style>
+
     <div class="card" style="text-align: center; border-top: 5px solid var(--primary); padding-bottom: 35px;">
-        <h2 style="color: var(--primary); margin-top: 0; font-size: 26px;">NAAS Insights Engine</h2>
-        <form action="/" method="GET" style="max-width: 900px; margin: 0 auto; text-align: left;">
+        <h2 style="color: var(--primary); margin-top: 0; font-size: 28px; margin-bottom: 10px;">NAAS Insights Engine</h2>
+        <div class="trust-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Database Updated: Latest ${latestYear} NAAS Ratings
+        </div>
+
+        <form action="/" method="GET" id="search-form" style="max-width: 900px; margin: 0 auto; text-align: left;">
             <div style="margin-bottom: 20px; position: relative;">
                 <label style="font-size: 11px; font-weight: 800; color: #666; text-transform: uppercase;">Journal Name or ISSN</label>
                 <input type="text" id="main-search" name="search" autocomplete="off" value="${searchTerm}" 
-                       placeholder="Enter journal name or ISSN..." 
-                       style="width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 8px; font-size: 16px; margin-top: 5px;">
+                       placeholder="Search across 3,500+ agricultural & scientific journals..." 
+                       style="width: 100%; padding: 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 16px; margin-top: 5px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);">
                 <div class="autocomplete-dropdown" id="search-dropdown"></div>
             </div>
+            
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end;">
                 <div class="form-group">
                     <label style="font-size: 11px; font-weight: 800; color: #666; text-transform: uppercase;">Min Rating (${latestYear})</label>
-                    <input type="number" step="0.01" name="min_rating" value="${min}" placeholder="e.g. 5.0" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px;">
+                    <input type="number" step="0.01" name="min_rating" value="${min}" placeholder="e.g. 5.0" style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 6px;">
                 </div>
                 <div class="form-group">
                     <label style="font-size: 11px; font-weight: 800; color: #666; text-transform: uppercase;">Max Rating (${latestYear})</label>
-                    <input type="number" step="0.01" name="max_rating" value="${max}" placeholder="e.g. 10.0" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px;">
+                    <input type="number" step="0.01" name="max_rating" value="${max}" placeholder="e.g. 10.0" style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 6px;">
                 </div>
-                <button type="submit" class="btn" style="height: 44px; justify-content: center;">SEARCH DATABASE</button>
+                <button type="submit" class="btn" style="height: 48px; font-size: 15px; letter-spacing: 0.5px;">SEARCH DATABASE</button>
             </div>
-            ${isSearchSubmitted ? `<div style="text-align: right; margin-top: 15px;"><a href="/" style="font-size: 12px; color: #888; text-decoration: none;">Clear Filters</a></div>` : ''}
+
+            <div class="quick-filters">
+                <span class="filter-chip" onclick="applyQuickFilter(9.0, 20.0)">🔥 Top Tier (9.0+)</span>
+                <span class="filter-chip" onclick="applyQuickFilter(8.0, 8.99)">⭐ Gold Standard (8.0 - 8.9)</span>
+                <span class="filter-chip" onclick="applyQuickFilter(6.0, 7.99)">📈 Solid Performers (6.0 - 7.9)</span>
+            </div>
+
+            ${isSearchSubmitted ? `<div style="text-align: center; margin-top: 20px;"><a href="/" style="font-size: 13px; color: var(--danger); text-decoration: none; font-weight: bold; background: #fff5f5; padding: 6px 12px; border-radius: 4px; border: 1px solid #ffdcdc;">Reset All Filters ✖</a></div>` : ''}
         </form>
     </div>
 
-    ${isSearchSubmitted ? `
-        <div class="card" style="padding: 0; overflow: hidden;">
-            <div style="padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa; display: flex; justify-content: space-between;">
-                <h3 style="margin: 0; font-size: 16px;">Search Results (${results.length})</h3>
-                <span style="font-size: 12px; color: #888;">Sorted by Latest Rating</span>
+    <script>
+        function applyQuickFilter(minVal, maxVal) {
+            document.querySelector('input[name="min_rating"]').value = minVal;
+            document.querySelector('input[name="max_rating"]').value = maxVal;
+            document.querySelector('input[name="search"]').value = '';
+            document.getElementById('search-form').submit();
+        }
+    </script>
+
+    ${!isSearchSubmitted ? `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 25px;">
+            <div class="card" style="margin: 0; border-top: 4px solid var(--success);">
+                <h3 style="margin-top: 0; font-size: 18px; color: #333; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    What is this platform?
+                </h3>
+                <p style="font-size: 14px; color: #555; line-height: 1.6;">
+                    The <strong>NAAS Insights Engine</strong> is an advanced analytical tool designed for agricultural researchers, students, and scientists. It goes beyond simple static lists by providing a 10-year longitudinal analysis of National Academy of Agricultural Sciences (NAAS) journal ratings. 
+                </p>
+                <p style="font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 0;">
+                    Our statistical engine calculates momentum, standard deviation, and historical baselines to algorithmically recommend the most stable and impactful venues for your research.
+                </p>
             </div>
+            <div class="card" style="margin: 0; border-top: 4px solid var(--accent);">
+                <h3 style="margin-top: 0; font-size: 18px; color: #333; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    How to use the engine
+                </h3>
+                <ul style="font-size: 14px; color: #555; line-height: 1.6; padding-left: 20px; margin-bottom: 0;">
+                    <li style="margin-bottom: 10px;"><strong>Search:</strong> Use the smart search bar to find journals by their exact Name or standard ISSN.</li>
+                    <li style="margin-bottom: 10px;"><strong>Analyze:</strong> Click the <span style="background: var(--success); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">📊 Analytics</span> button on any result to view its 10-year trajectory, volatility metrics, and publishing recommendations.</li>
+                    <li><strong>Compare:</strong> Use the "Compare" tab in the top navigation to pit up to 4 journals against each other to identify the best long-term performer.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 25px; border-left: 5px solid var(--primary); background: #fcfcfc;">
+            <div style="font-style: italic; font-size: 16px; color: #444; line-height: 1.6; margin-bottom: 15px;">
+                "Our goal is to bring deep statistical insight and transparency to the journal selection process. By analyzing historical volatility and momentum, we aim to empower agricultural scientists to make confident, data-driven decisions for their publication strategies."
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+                <div>
+                    <h4 style="margin: 0 0 5px 0; font-size: 15px; color: #333;">Dr. Saqib Parvaze Allaie</h4>
+                    <p style="margin: 0; font-size: 13px; color: #666; font-weight: 500;">Subject Matter Specialist (Agricultural Engineering)</p>
+                    <p style="margin: 0; font-size: 12px; color: #888;">Krishi Vigyan Kendra (KVK), Shamli<br>Sardar Vallabhbhai Patel University of Agriculture and Technology (SVPUAT)</p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 5px 0; font-size: 15px; color: #333;">Dr. Sabah Parvaze</h4>
+                    <p style="margin: 0; font-size: 13px; color: #666; font-weight: 500;">Assistant Professor (Agricultural Engineering)</p>
+                    <p style="margin: 0; font-size: 12px; color: #888;">College of Agricultural Engineering and Technology<br>Sher-e-Kashmir University of Agricultural Sciences and Technology of Kashmir (SKUAST-K)</p>
+                </div>
+            </div>
+        </div>
+    ` : `
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h3 style="margin: 0 0 4px 0; font-size: 18px; color: #333;">Search Results (${results.length})</h3>
+                    <div style="font-size: 12px; color: #888;">Sorted by Latest Rating & Momentum</div>
+                </div>
+                <button onclick="downloadCSV()" class="btn" style="padding: 8px 15px; font-size: 13px; background: var(--success); display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(40,167,69,0.2);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Export Data (CSV)
+                </button>
+            </div>
+            
             <div style="overflow-x: auto;">
                 <table style="min-width: 950px; width: 100%; border-collapse: collapse;">
                     <thead>
@@ -44,7 +127,7 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                         </tr>
                     </thead>
                     <tbody>
-                        ${results.length === 0 ? `<tr><td colspan="6" style="text-align:center; padding: 30px; color: #888;">No journals found matching your criteria.</td></tr>` : 
+                        ${results.length === 0 ? `<tr><td colspan="6" style="text-align:center; padding: 40px; color: #888; font-size: 15px;">No journals found matching your specific criteria. Try broadening your search or resetting the filters.</td></tr>` : 
                         results.map(row => {
                             const latest = row.latest_score !== null ? Number(row.latest_score) : null;
                             const avg = row.calculated_avg !== null ? Number(row.calculated_avg) : null;
@@ -84,10 +167,48 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                     </tbody>
                 </table>
             </div>
+            
+            ${results.length >= 150 ? `
+            <div style="padding: 15px 20px; background: #fffdf8; border-top: 1px solid #ffecd9; text-align: center; font-size: 13px; color: #d9534f; font-weight: 600;">
+                ⚠️ Showing the top 150 matching results. Please use the search bar or filters above to narrow down your selection.
+            </div>` : ''}
         </div>
-    ` : ''}`;
+        
+        <script>
+            function downloadCSV() {
+                const data = ${safeResults};
+                if (!data || data.length === 0) { alert("No data available to export."); return; }
+                
+                let csvContent = "ISSN,Journal Title,Latest Score,10-Yr Avg,Data Points\\n";
+                
+                data.forEach(row => {
+                    const issn = row.ISSN ? row.ISSN.replace(/"/g, '""') : "N/A";
+                    const title = row.Name ? '"' + row.Name.replace(/"/g, '""') + '"' : "Unknown";
+                    const latest = row.latest_score !== null ? row.latest_score.toFixed(2) : "N/A";
+                    const avg = row.calculated_avg !== null ? row.calculated_avg.toFixed(2) : "N/A";
+                    const years = row.valid_years || 0;
+                    
+                    csvContent += \`\${issn},\${title},\${latest},\${avg},\${years}\\n\`;
+                });
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", "NAAS_Insights_Export.csv");
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        </script>
+    `}
+  `;
 }
 
+// ---------------------------------------------------------
+// ANALYTICS MODULE (NO CHANGES REQUIRED HERE)
+// ---------------------------------------------------------
 export function renderAnalyticsBody(data) {
   if (!data || !data.ratings || data.ratings.length === 0) {
     return `<div class="card" style="text-align:center; padding: 40px;"><h3>No Rating History Found</h3><p>We do not have historical data for <b>${data.name}</b>.</p><a href="/" class="btn">Back to Search</a></div>`;
@@ -359,12 +480,11 @@ export function renderAnalyticsBody(data) {
 }
 
 // ---------------------------------------------------------
-// NEW MULTI-JOURNAL COMPARE & RANKING MODULE
+// COMPARE MODULE (NO CHANGES REQUIRED HERE)
 // ---------------------------------------------------------
 export function renderCompareBody(journals) {
-    const defaultColors = ['#0056b3', '#ff8c00', '#28a745', '#dc3545']; // Blue, Orange, Green, Red
+    const defaultColors = ['#0056b3', '#ff8c00', '#28a745', '#dc3545']; 
     
-    // --- STATE 1: PICKER UI (< 2 journals) ---
     if (journals.length < 2) {
         const preSelectedJs = journals.length === 1 ? `addJournal('${journals[0].master_id}', '${journals[0].name.replace(/'/g, "\\'")}', '${journals[0].issn}');` : '';
 
@@ -445,11 +565,10 @@ export function renderCompareBody(journals) {
         </script>`;
     }
 
-    // --- STATE 2: STATISTICAL ANALYSIS & RANKING ---
     const calculateAdvancedStats = (journal, originalIndex) => {
         const ratings = journal.ratings;
         const n = ratings.length;
-        if (n === 0) return { ...journal, originalIndex, score: -999, rank: 0, latest: 0, avg: 0 }; // Edge case fallback
+        if (n === 0) return { ...journal, originalIndex, score: -999, rank: 0, latest: 0, avg: 0 };
 
         const scores = ratings.map(r => r.rating);
         const latestVal = scores[n - 1];
@@ -473,12 +592,8 @@ export function renderCompareBody(journals) {
         }
 
         const yoyChange = prevVal !== null ? latestVal - prevVal : 0;
-
-        // THE RANKING ALGORITHM
-        // Base Score (40% Latest) + Momentum (40% 3-yr Avg) + Baseline (20% Hist Avg) - Volatility Penalty
         const compositeScore = (latestVal * 0.40) + (recentAvg * 0.40) + (avgScore * 0.20) - (stdDev * 0.25);
 
-        // Recommendation Logic
         let recStatus = "Recommended"; let recColor = "var(--success)";
         if (n < 3) {
             if (latestVal < avgScore) { recStatus = "Caution"; recColor = "var(--accent)"; }
@@ -508,22 +623,17 @@ export function renderCompareBody(journals) {
         };
     };
 
-    // Calculate stats and generate Rankings
     let analyzedJournals = journals.map((j, idx) => calculateAdvancedStats(j, idx));
-    
-    // Sort descending by algorithmic score to assign ranks
     const sortedByScore = [...analyzedJournals].sort((a, b) => b.score - a.score);
     
-    // Map ranks back to the original array (to keep chart colors consistent with user input)
     analyzedJournals = analyzedJournals.map(j => {
         const rankIndex = sortedByScore.findIndex(sorted => sorted.master_id === j.master_id);
-        j.rank = rankIndex + 1; // 1st, 2nd, etc.
+        j.rank = rankIndex + 1;
         return j;
     });
 
     const rankMedals = { 1: '🥇 1st', 2: '🥈 2nd', 3: '🥉 3rd', 4: '4th' };
 
-    // Build UI Summary Cards (Sorted by Rank for the display)
     let summaryCardsHtml = "";
     sortedByScore.forEach((j) => {
         summaryCardsHtml += `
@@ -550,7 +660,6 @@ export function renderCompareBody(journals) {
         </div>`;
     });
 
-    // Chart & Timeline Logic
     const yearsSet = new Set();
     journals.forEach(j => j.ratings.forEach(r => yearsSet.add(r.year)));
     const allYears = Array.from(yearsSet).sort();
@@ -603,7 +712,7 @@ export function renderCompareBody(journals) {
 
     <div class="card" style="background: #f8f9fa; border: 1px dashed #ccc; padding: 15px 20px; font-size: 12px; color: #555;">
         <strong style="color: #333;">How is the Rank calculated?</strong> The engine uses a composite algorithm to find the most robust journal. <br>
-        <code>Composite Score = (Latest Rating × 0.40) + (3-Yr Momentum × 0.40) + (10-Yr Avg × 0.20) - (Volatility Penalty)</code>
+        <code style="display: inline-block; margin-top: 5px; background: #fff; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">Composite Score = (Latest Rating × 0.40) + (3-Yr Momentum × 0.40) + (10-Yr Avg × 0.20) - (Volatility Penalty)</code>
     </div>
 
     <div class="card">
