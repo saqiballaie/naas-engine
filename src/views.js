@@ -92,15 +92,68 @@ export function renderAnalyticsBody(data) {
   if (!data || !data.ratings || data.ratings.length === 0) {
     return `<div class="card" style="text-align:center; padding: 40px;"><h3>No Rating History Found</h3><p>We do not have historical data for <b>${data.name}</b>.</p><a href="/" class="btn">Back to Search</a></div>`;
   }
+  
   const ratings = data.ratings;
   const latest = ratings[ratings.length - 1];
+  const previous = ratings.length > 1 ? ratings[ratings.length - 2] : null;
   const sum = ratings.reduce((acc, curr) => acc + curr.rating, 0);
   const avgScore = sum / ratings.length;
+
+  // Formatting arrays for the Chart.js
+  const chartYears = JSON.stringify(ratings.map(r => r.year));
+  const chartValues = JSON.stringify(ratings.map(r => r.rating));
+  const avgValues = JSON.stringify(ratings.map(() => avgScore.toFixed(2))); // Straight line array
+
+  // Recommendation Engine Logic
+  let recStatus = "Recommended";
+  let recColor = "var(--success)";
+  let recReason = "The journal exhibits a stable or upward trajectory above its historical average.";
+  
+  // If the latest rating is dropping significantly below the 10-year average, OR dropping consistently YoY
+  if (latest.rating < avgScore && previous && latest.rating < previous.rating) {
+      recStatus = "Not Recommended";
+      recColor = "var(--danger)";
+      recReason = "The journal's recent NAAS rating is declining and currently performing below its 10-year historical average.";
+  } else if (latest.rating < avgScore) {
+      recStatus = "Proceed with Caution";
+      recColor = "var(--accent)";
+      recReason = "The journal is currently rated below its 10-year average, though it has not shown a severe YoY decline.";
+  }
+
+  // Pre-calculate table rows (Reverse chronological for the table UI)
+  let tableRowsHtml = "";
+  for (let i = ratings.length - 1; i >= 0; i--) {
+      const current = ratings[i];
+      const prev = i > 0 ? ratings[i - 1] : null;
+      
+      const diffFromAvg = current.rating - avgScore;
+      const yoyChange = prev ? current.rating - prev.rating : 0;
+      
+      const avgColor = diffFromAvg >= 0 ? "var(--success)" : "var(--danger)";
+      const yoyColor = yoyChange > 0 ? "var(--success)" : (yoyChange < 0 ? "var(--danger)" : "#666");
+
+      tableRowsHtml += `
+        <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 12px;"><strong>${current.year}</strong></td>
+            <td style="padding: 12px; text-align: center;"><span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${current.rating.toFixed(2)}</span></td>
+            <td style="padding: 12px; text-align: center; color: ${yoyColor}; font-weight: bold;">${prev ? (yoyChange > 0 ? '+' : '') + yoyChange.toFixed(2) : '-'}</td>
+            <td style="padding: 12px; text-align: center; color: ${avgColor}; font-weight: bold;">${(diffFromAvg > 0 ? '+' : '') + diffFromAvg.toFixed(2)}</td>
+        </tr>
+      `;
+  }
 
   return `
     <div class="card">
         <h2 style="color: var(--primary); margin: 0;">${data.name}</h2>
-        <div style="margin-top: 10px; display: inline-block; background: #f1f3f4; padding: 4px 10px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; color: #555;">ISSN: <b>${data.issn}</b></div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
+            <div style="background: #f1f3f4; padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; color: #555;">
+                ISSN: <b>${data.issn}</b>
+            </div>
+            <a href="https://www.google.com/search?q=ISSN+${data.issn}" target="_blank" class="btn" style="padding: 6px 15px; font-size: 13px; background: #4285F4; display: flex; align-items: center; gap: 5px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Search Google
+            </a>
+        </div>
     </div>
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">
@@ -119,17 +172,82 @@ export function renderAnalyticsBody(data) {
         <div style="height: 350px; width: 100%;"><canvas id="naasChart"></canvas></div>
     </div>
     
+    <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 25px;">
+        <div style="padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa;">
+            <h3 style="margin: 0; font-size: 16px;">Historical Data Matrix</h3>
+        </div>
+        <div style="overflow-x: auto;">
+            <table style="min-width: 600px; width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding: 12px; background: #f8f9fa; text-align: left;">Year</th>
+                        <th style="padding: 12px; background: #f8f9fa; text-align: center;">NAAS Rating</th>
+                        <th style="padding: 12px; background: #f8f9fa; text-align: center;">YoY Change</th>
+                        <th style="padding: 12px; background: #f8f9fa; text-align: center;">Deviation from Avg</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRowsHtml}
+                </tbody>
+                <tfoot>
+                    <tr style="background: #eef2f5;">
+                        <td style="padding: 12px; text-align: right; font-weight: bold; color: #555;">10-Year Average:</td>
+                        <td style="padding: 12px; text-align: center; font-weight: bold; color: var(--primary); font-size: 16px;">${avgScore.toFixed(2)}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 5px solid ${recColor}; background: #fffcfc;">
+        <h3 style="margin-top: 0; color: #333; font-size: 16px;">Algorithmic Recommendation</h3>
+        <p style="font-size: 15px; line-height: 1.6; color: #555;">
+            On the basis of the NAAS rating analysis of the last 10 years and the current NAAS trajectory, it is 
+            <strong style="color: ${recColor}; font-size: 16px;">${recStatus}</strong> to publish in this journal.
+        </p>
+        <p style="font-size: 13px; color: #888; margin-bottom: 0;"><em>Reasoning: ${recReason}</em></p>
+    </div>
+
     <script>
         setTimeout(() => {
             new Chart(document.getElementById('naasChart').getContext('2d'), {
                 type: 'line',
                 data: {
-                    labels: ${JSON.stringify(ratings.map(r => r.year))},
-                    datasets: [{ label: 'NAAS Rating', data: ${JSON.stringify(ratings.map(r => r.rating))}, borderColor: '#0056b3', backgroundColor: 'rgba(0, 86, 179, 0.05)', fill: true, tension: 0.3, pointRadius: 5 }]
+                    labels: ${chartYears},
+                    datasets: [
+                        { 
+                            label: 'NAAS Rating', 
+                            data: ${chartValues}, 
+                            borderColor: '#0056b3', 
+                            backgroundColor: 'rgba(0, 86, 179, 0.05)', 
+                            fill: true, 
+                            tension: 0.3, 
+                            pointRadius: 5,
+                            order: 1
+                        },
+                        {
+                            label: '10-Year Average (${avgScore.toFixed(2)})',
+                            data: ${avgValues},
+                            borderColor: '#28a745',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0,
+                            order: 2
+                        }
+                    ]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        tooltip: { enabled: true }
+                    }
+                }
             });
-        }, 100);
+        }, 150);
     </script>
   `;
 }
