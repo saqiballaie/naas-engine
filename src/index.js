@@ -7,6 +7,7 @@ import { renderAnalyticsPage } from './pages/analytics-page.js';
 import { renderComparePage } from './pages/compare-page.js';
 import { renderStatisticsPage } from './pages/statistics-page.js';
 import { renderDisclaimer, renderTerms } from './pages/legal-pages.js';
+import { renderAboutPage } from './pages/about-page.js';
 
 export default {
   /**
@@ -103,6 +104,12 @@ export default {
             headers: { "Content-Type": "text/html" } 
         });
       }
+
+      if (path === "/about") {
+    return new Response(layout("About the Project", renderAboutPage(), path), { 
+        headers: { "Content-Type": "text/html" } 
+    });
+}
 
       // 5. Legal Routes (For Indian Copyright Compliance)
       // -------------------------------------------------------------
