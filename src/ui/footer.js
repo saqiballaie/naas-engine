@@ -9,7 +9,7 @@ export function renderFooter() {
                 </div>
                 <div>
                     <h4 style="font-size: 12px; text-transform: uppercase; color: #64748b; margin-bottom: 8px;">Project Lead</h4>
-                    <p style="margin: 0 0 5px 0;"><a href="https://www.linkedin.com/in/saqibparvaze/" target="_blank" class="author-link">Dr. Saqib Parvaze Allaie</a></p>
+                    <p style="margin: 0 0 5px 0;"><a href="https://www.linkedin.com/in/saqibparvaze" target="_blank" class="author-link">Dr. Saqib Parvaze Allaie</a></p>
                     <p style="margin: 0; font-size: 12px; color: #cbd5e1; line-height: 1.5;">SMS (Agri. Engg.), KVK Shamli<br>SVPUAT, Meerut, UP</p>
                 </div>
                 <div>
