@@ -131,16 +131,21 @@ export default {
         const latestYear = await db.getLatestYear(env.DB);
         const search = url.searchParams.get("search") || "";
         
-        // Sanitize rating inputs
+        // NEW: Get the page number from URL
+        const page = parseInt(url.searchParams.get("page") || "1");
+        
         const rawMin = url.searchParams.get("min_rating");
         const rawMax = url.searchParams.get("max_rating");
-        const min = rawMin && !isNaN(parseFloat(rawMin)) ? Math.max(0, Math.min(20, parseFloat(rawMin))).toString() : "";
-        const max = rawMax && !isNaN(parseFloat(rawMax)) ? Math.max(0, Math.min(20, parseFloat(rawMax))).toString() : "";
+        const min = rawMin && !isNaN(parseFloat(rawMin)) ? parseFloat(rawMin).toString() : "";
+        const max = rawMax && !isNaN(parseFloat(rawMax)) ? parseFloat(rawMax).toString() : "";
         
         const isSubmitted = !!(search || min || max);
-        const results = isSubmitted ? await db.searchJournals(env.DB, latestYear, search, min, max) : [];
+        
+        // UPDATED: Pass 'page' to the search function
+        const results = isSubmitted ? await db.searchJournals(env.DB, latestYear, search, min, max, page) : [];
 
-        return new Response(layout("Search Journals", renderSearchPage(search, min, max, results, isSubmitted), path), { 
+        // UPDATED: Pass 'page' to the renderer
+        return new Response(layout("Search Journals", renderSearchPage(search, min, max, results, isSubmitted, page), path), { 
             headers: { "Content-Type": "text/html" } 
         });
       }
