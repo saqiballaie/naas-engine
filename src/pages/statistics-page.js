@@ -103,7 +103,7 @@ export function renderStatisticsPage(stats) {
             <div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                 <h3 style="margin: 0; font-size: 16px; color: #334155;">✨ Added in ${stats.latestYear} (${stats.added.length})</h3>
             </div>
-            <div style="max-height: 400px; overflow-y: auto;">
+            <div>
                 ${stats.added.length === 0 ? '<div style="padding: 20px; text-align: center; color: #64748b;">No new additions this year.</div>' : `
                 <table style="width: 100%; border-collapse: collapse;">
                     <tbody>
@@ -121,7 +121,7 @@ export function renderStatisticsPage(stats) {
             <div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                 <h3 style="margin: 0; font-size: 16px; color: #334155;">❌ Removed in ${stats.latestYear} (${stats.removed.length})</h3>
             </div>
-            <div style="max-height: 400px; overflow-y: auto;">
+            <div>
                 ${stats.removed.length === 0 ? '<div style="padding: 20px; text-align: center; color: #64748b;">No removals this year.</div>' : `
                 <table style="width: 100%; border-collapse: collapse;">
                     <tbody>
@@ -140,6 +140,7 @@ export function renderStatisticsPage(stats) {
         <p>💡 <em>Analytical Note: Top Gainers and Declines are calculated using the percentage change from their historical average to account for relative impact across different rating tiers.</em></p>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         setTimeout(() => {
             // Average Score Trend Chart
