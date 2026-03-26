@@ -31,24 +31,24 @@ export function layout(title, content, path, latestYear) {
         .autocomplete-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; text-align: left; }
         .autocomplete-item:hover { background: var(--primary-light); }
         
-        /* Replace the .table-responsive and table sections */
-.table-responsive { 
-    width: 100%; 
-    overflow-x: auto; 
-    -webkit-overflow-scrolling: touch; 
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    margin-top: 10px;
-}
-table { 
-    width: 100%; 
-    border-collapse: collapse; 
-    table-layout: auto; /* Changed from fixed to auto for better content fit */
-}
-th, td { 
-    white-space: nowrap; /* Prevents awkward text wrapping in headers */
-    padding: 12px 15px;
-}
+        /* TABLE OVERFLOW FIXES */
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; width: 100%; }
+        .table-responsive { 
+            width: 100%; 
+            overflow-x: auto; 
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+        }
+        table { width: 100%; border-collapse: collapse; table-layout: auto; }
+        th, td { 
+            padding: 12px; 
+            text-align: left; 
+            border-bottom: 1px solid #eee; 
+            font-size: 14px;
+            max-width: 300px; /* Prevents title cells from pushing everything off screen */
+            word-wrap: break-word;
+        }
         
         /* Mobile Breakpoints */
         @media (max-width: 768px) { 
