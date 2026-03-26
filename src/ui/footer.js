@@ -30,36 +30,29 @@ export function renderFooter() {
                     </p>
                 </div>
             </div>
-            <div style="margin-top: 25px; display: flex; justify-content: space-between; font-size: 12px; color: #64748b;">
-                <span>&copy; ${new Date().getFullYear()} | Academic & Research Purposes</span>
-                <span>Version 1.2.1</span>
+            
+            <div style="margin-top: 25px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; font-size: 12px; color: #94a3b8;">
+                <div style="font-weight: 500;">
+                    &copy; ${new Date().getFullYear()} Dr. Saqib Parvaze Allaie & Dr. Sabah Parvaze. All Rights Reserved.
+                </div>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <a href="/disclaimer" class="legal-link">Disclaimer</a>
+                    <span>|</span>
+                    <a href="/terms" class="legal-link">Terms of Use</a>
+                    <span>|</span>
+                    <span>Version 1.2.2</span>
+                </div>
             </div>
         </div>
         
         <style>
-            .author-link {
-                color: #f1f5f9;
-                font-weight: bold;
-                text-decoration: none;
-                display: inline-flex;
-                align-items: center;
-                gap: 5px;
-                transition: color 0.2s ease;
-                font-size: 14px;
-            }
-            .author-link::after {
-                content: '🔗';
-                font-size: 10px;
-                opacity: 0.6;
-                transition: opacity 0.2s ease;
-            }
-            .author-link:hover {
-                color: #38bdf8; /* Bright highlight color */
-                text-decoration: underline;
-            }
-            .author-link:hover::after {
-                opacity: 1;
-            }
+            .author-link { color: #f1f5f9; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; transition: color 0.2s ease; font-size: 14px; }
+            .author-link::after { content: '🔗'; font-size: 10px; opacity: 0.6; transition: opacity 0.2s ease; }
+            .author-link:hover { color: #38bdf8; text-decoration: underline; }
+            .author-link:hover::after { opacity: 1; }
+            
+            .legal-link { color: #cbd5e1; text-decoration: none; transition: color 0.2s ease; }
+            .legal-link:hover { color: #ffffff; text-decoration: underline; }
         </style>
     </footer>
   `;
