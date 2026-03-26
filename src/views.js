@@ -146,7 +146,7 @@ export function renderAnalyticsBody(data) {
       if (recentAvg >= avgScore && latestVal >= avgScore && !isSevereCrash) {
           recStatus = "Recommended";
           recColor = "var(--success)";
-          recReason = `The journal demonstrates strong, sustained performance. Its recent 3-year momentum meets or exceeds its 10-year historical baseline.`;
+          recReason = `The journal demonstrates strong, sustained performance. Its recent 3-year momentum meets or exceeds its historical baseline.`;
       } else if (isSevereSpike && historicalAvg < avgScore) {
           recStatus = "Proceed with Caution";
           recColor = "var(--accent)";
@@ -204,25 +204,65 @@ export function renderAnalyticsBody(data) {
       `;
   }
 
-  // Math Table for Decision Matrix
   const statusBadge = (condition) => condition ? `<span style="background:var(--success); color:white; padding:2px 6px; border-radius:4px; font-size:11px;">PASS</span>` : `<span style="background:var(--danger); color:white; padding:2px 6px; border-radius:4px; font-size:11px;">FAIL/WARN</span>`;
 
   return `
+    <style>
+        /* Tooltip Styles */
+        .tooltip-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 14px; height: 14px; border-radius: 50%; background: #e9ecef; color: #6c757d;
+            font-size: 10px; font-weight: bold; cursor: help; margin-left: 4px; border: 1px solid #ced4da;
+        }
+        .tooltip-container { position: relative; display: inline-flex; align-items: center; }
+        .tooltip-container:hover::after {
+            content: attr(data-tooltip);
+            position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+            background: #333; color: #fff; padding: 6px 10px; border-radius: 4px;
+            font-size: 11px; font-weight: normal; white-space: nowrap; z-index: 10;
+            margin-bottom: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;
+        }
+        
+        /* Print-Friendly CSS */
+        @media print {
+            body { background: white !important; color: black !important; }
+            header, footer, .page-title-strip, .btn, .no-print { display: none !important; }
+            .card { box-shadow: none !important; border: 1px solid #ccc !important; margin-bottom: 20px !important; page-break-inside: avoid; }
+            .container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            canvas { max-width: 100% !important; height: auto !important; }
+        }
+    </style>
+
+    <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <a href="/" class="btn" style="background: #6c757d; font-size: 13px;">← Back to Search</a>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="window.print()" class="btn" style="background: #17a2b8; font-size: 13px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:-2px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Save PDF
+            </button>
+            <a href="/compare?id1=${data.master_id}" class="btn" style="background: var(--accent); font-size: 13px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:-2px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Compare Journal
+            </a>
+        </div>
+    </div>
+
     <div class="card">
-        <h2 style="color: var(--primary); margin: 0;">${data.name}</h2>
+        <h2 style="color: var(--primary); margin: 0; font-size: 24px;">${data.name}</h2>
         <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
             <div style="background: #f1f3f4; padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; color: #555;">
                 ISSN: <b>${data.issn}</b>
             </div>
-            <a href="https://www.google.com/search?q=ISSN+${data.issn}" target="_blank" class="btn" style="padding: 6px 15px; font-size: 13px; background: #4285F4; display: flex; align-items: center; gap: 5px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Search Google
+            <a href="https://www.google.com/search?q=ISSN+${data.issn}" target="_blank" class="btn no-print" style="padding: 6px 15px; font-size: 13px; background: #4285F4; display: flex; align-items: center; gap: 5px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Search Google
             </a>
         </div>
     </div>
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
         <div class="card" style="text-align: center; border-left: 5px solid #6c757d; margin: 0; padding: 20px 10px;">
-            <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Historical Average</small>
+            <div class="tooltip-container" data-tooltip="The simple average of all available ratings.">
+                <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Historical Average</small>
+                <span class="tooltip-icon">?</span>
+            </div>
             <div style="font-size: 26px; font-weight: bold; color: #6c757d; line-height: 1.2; margin-top: 5px;">${avgScore.toFixed(2)}</div>
         </div>
         <div class="card" style="text-align: center; border-left: 5px solid var(--primary); margin: 0; padding: 20px 10px;">
@@ -293,25 +333,41 @@ export function renderAnalyticsBody(data) {
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Long-Term Baseline</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">
+                            <div class="tooltip-container" data-tooltip="Compares the most recent rating against the overall average.">
+                                Long-Term Baseline <span class="tooltip-icon">?</span>
+                            </div>
+                        </td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Latest: <b>${latestVal.toFixed(2)}</b></td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">&ge; Hist. Avg (${avgScore.toFixed(2)})</td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(latestVal >= avgScore)}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Short-Term Momentum</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">
+                            <div class="tooltip-container" data-tooltip="Average of the last 3 years, showing recent momentum.">
+                                Short-Term Momentum <span class="tooltip-icon">?</span>
+                            </div>
+                        </td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">3-Yr Avg: <b>${recentAvg.toFixed(2)}</b></td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">&ge; Hist. Avg (${historicalAvg.toFixed(2)})</td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(recentAvg >= historicalAvg)}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Volatility Index (StdDev)</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">
+                            <div class="tooltip-container" data-tooltip="Standard Deviation. Lower numbers mean a more consistent journal.">
+                                Volatility Index (StdDev) <span class="tooltip-icon">?</span>
+                            </div>
+                        </td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">&sigma; = <b>${stdDev.toFixed(2)}</b></td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">&lt; 0.30 (Stability)</td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(stdDev < 0.30)}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 12px;">Recent Anomaly (YoY)</td>
+                        <td style="padding: 8px 12px;">
+                            <div class="tooltip-container" data-tooltip="Did the journal drop severely in the last year compared to its normal volatility?">
+                                Recent Anomaly (YoY) <span class="tooltip-icon">?</span>
+                            </div>
+                        </td>
                         <td style="padding: 8px 12px;">Change: <b>${yoyChange > 0 ? '+':''}${yoyChange.toFixed(2)}</b></td>
                         <td style="padding: 8px 12px; color: #666;">Drop &lt; 1 StdDev (${stdDev.toFixed(2)})</td>
                         <td style="padding: 8px 12px;">${statusBadge(yoyChange >= -stdDev)}</td>
