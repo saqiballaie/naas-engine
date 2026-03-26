@@ -337,3 +337,84 @@ export function renderCompareBody(journals) {
         }, 150);
     </script>`;
 }
+export function renderStatisticsBody(stats) {
+  const years = JSON.stringify(stats.yearlyTrends.map(d => d.year));
+  const avgRatings = JSON.stringify(stats.yearlyTrends.map(d => d.avg_rating.toFixed(2)));
+  const counts = JSON.stringify(stats.yearlyTrends.map(d => d.journal_count));
+  
+  const tierLabels = JSON.stringify(stats.distribution.map(d => d.tier));
+  const tierData = JSON.stringify(stats.distribution.map(d => d.count));
+
+  return `
+    <div class="card" style="border-top: 5px solid var(--primary);">
+        <h2 style="margin:0;">National Agricultural Research Statistics</h2>
+        <p style="color: #666;">Longitudinal analysis of ${stats.yearlyTrends.length} years of NAAS data.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px;">
+        <div class="card">
+            <h3>Average NAAS Score Trend</h3>
+            <div style="height: 300px;"><canvas id="trendChart"></canvas></div>
+            <p style="font-size: 12px; color: #777; margin-top: 10px;">Indicates if agricultural journals are improving in quality over time.</p>
+        </div>
+
+        <div class="card">
+            <h3>Journals Indexed per Year</h3>
+            <div style="height: 300px;"><canvas id="countChart"></canvas></div>
+        </div>
+
+        <div class="card">
+            <h3>Journal Tier Distribution (${stats.latestYear})</h3>
+            <div style="height: 300px; display: flex; justify-content: center;">
+                <canvas id="tierChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Top 10 Performing Journals (${stats.latestYear})</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr style="background:#f8f9fa;"><th>Rank</th><th>Journal</th><th>Score</th></tr>
+                    </thead>
+                    <tbody>
+                        ${stats.topJournals.map((j, i) => `
+                            <tr>
+                                <td>${i+1}</td>
+                                <td style="font-size: 13px;"><strong>${j.Name}</strong></td>
+                                <td><span style="background:var(--success); color:white; padding:2px 6px; border-radius:4px;">${j.rating.toFixed(2)}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        setTimeout(() => {
+            // Trend Line Chart
+            new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: { labels: ${years}, datasets: [{ label: 'Avg Rating', data: ${avgRatings}, borderColor: '#0056b3', fill: true, backgroundColor: 'rgba(0, 86, 179, 0.1)' }] }
+            });
+
+            // Volume Bar Chart
+            new Chart(document.getElementById('countChart'), {
+                type: 'bar',
+                data: { labels: ${years}, datasets: [{ label: 'Total Journals', data: ${counts}, backgroundColor: '#ff8c00' }] }
+            });
+
+            // Tier Pie Chart
+            new Chart(document.getElementById('tierChart'), {
+                type: 'doughnut',
+                data: { 
+                    labels: ${tierLabels}, 
+                    datasets: [{ data: ${tierData}, backgroundColor: ['#0056b3', '#28a745', '#ff8c00', '#dc3545'] }] 
+                },
+                options: { maintainAspectRatio: false }
+            });
+        }, 200);
+    </script>
+  `;
+}
