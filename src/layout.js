@@ -31,9 +31,24 @@ export function layout(title, content, path, latestYear) {
         .autocomplete-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; text-align: left; }
         .autocomplete-item:hover { background: var(--primary-light); }
         
-        /* Responsive Table Magic */
-        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
-        table { min-width: max-content; width: 100%; border-collapse: collapse; }
+        /* Replace the .table-responsive and table sections */
+.table-responsive { 
+    width: 100%; 
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch; 
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-top: 10px;
+}
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    table-layout: auto; /* Changed from fixed to auto for better content fit */
+}
+th, td { 
+    white-space: nowrap; /* Prevents awkward text wrapping in headers */
+    padding: 12px 15px;
+}
         
         /* Mobile Breakpoints */
         @media (max-width: 768px) { 
