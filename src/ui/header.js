@@ -2,6 +2,7 @@ export function renderHeader(path) {
   const isSearchActive = (path === '/' || path === '/index.php') ? 'active' : '';
   const isCompareActive = (path.startsWith('/compare')) ? 'active' : '';
   const isStatsActive = (path === '/statistics') ? 'active' : '';
+  const isAboutActive = (path === '/about') ? 'active' : '';
 
   return `
     <header style="background: var(--white); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000;">
@@ -23,6 +24,7 @@ export function renderHeader(path) {
                 <li><a href="/" class="nav-link ${isSearchActive}">Search</a></li>
                 <li><a href="/compare" class="nav-link ${isCompareActive}">Compare</a></li>
                 <li><a href="/statistics" class="nav-link ${isStatsActive}">Statistics</a></li>
+                <li><a href="/about" class="nav-link ${isAboutActive}">About</a></li>
             </ul>
         </nav>
 
