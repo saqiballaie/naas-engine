@@ -96,22 +96,18 @@ export function renderAnalyticsBody(data) {
   const ratings = data.ratings;
   const n = ratings.length;
   
-  // Extract pure numbers for statistical math
   const scores = ratings.map(r => r.rating);
   const latestObj = ratings[n - 1];
   const previousObj = n > 1 ? ratings[n - 2] : null;
   const latestVal = latestObj.rating;
   const previousVal = previousObj ? previousObj.rating : null;
 
-  // 1. Calculate Mean (Average)
   const sum = scores.reduce((a, b) => a + b, 0);
   const avgScore = sum / n;
 
-  // 2. Calculate Variance & Standard Deviation (Volatility)
   const variance = scores.reduce((a, b) => a + Math.pow(b - avgScore, 2), 0) / n;
   const stdDev = Math.sqrt(variance);
 
-  // 3. Calculate 3-Year Moving Average vs Historical (Momentum)
   let recentAvg = latestVal;
   let historicalAvg = avgScore;
   if (n >= 4) {
@@ -125,7 +121,6 @@ export function renderAnalyticsBody(data) {
   
   const yoyChange = previousVal !== null ? latestVal - previousVal : 0;
 
-  // --- STATISTICAL RECOMMENDATION ENGINE ---
   let recStatus = "Recommended";
   let recColor = "var(--success)";
   let recReason = "";
@@ -172,17 +167,14 @@ export function renderAnalyticsBody(data) {
       }
   }
 
-  // Top Cards Logic
   const topDeviation = latestVal - avgScore;
   const topDevColor = topDeviation >= 0 ? "var(--success)" : "var(--danger)";
   const topDevSign = topDeviation >= 0 ? "+" : "";
 
-  // Formats for Chart.js
   const chartYears = JSON.stringify(ratings.map(r => r.year));
   const chartValues = JSON.stringify(ratings.map(r => r.rating));
   const avgValues = JSON.stringify(ratings.map(() => avgScore.toFixed(2))); 
 
-  // Table Row Generation (Reverse Chronological)
   let tableRowsHtml = "";
   for (let i = n - 1; i >= 0; i--) {
       const current = ratings[i];
@@ -208,22 +200,9 @@ export function renderAnalyticsBody(data) {
 
   return `
     <style>
-        /* Tooltip Styles */
-        .tooltip-icon {
-            display: inline-flex; align-items: center; justify-content: center;
-            width: 14px; height: 14px; border-radius: 50%; background: #e9ecef; color: #6c757d;
-            font-size: 10px; font-weight: bold; cursor: help; margin-left: 4px; border: 1px solid #ced4da;
-        }
+        .tooltip-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #e9ecef; color: #6c757d; font-size: 10px; font-weight: bold; cursor: help; margin-left: 4px; border: 1px solid #ced4da; }
         .tooltip-container { position: relative; display: inline-flex; align-items: center; }
-        .tooltip-container:hover::after {
-            content: attr(data-tooltip);
-            position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-            background: #333; color: #fff; padding: 6px 10px; border-radius: 4px;
-            font-size: 11px; font-weight: normal; white-space: nowrap; z-index: 10;
-            margin-bottom: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;
-        }
-        
-        /* Print-Friendly CSS */
+        .tooltip-container:hover::after { content: attr(data-tooltip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: normal; white-space: nowrap; z-index: 10; margin-bottom: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none; }
         @media print {
             body { background: white !important; color: black !important; }
             header, footer, .page-title-strip, .btn, .no-print { display: none !important; }
@@ -333,41 +312,25 @@ export function renderAnalyticsBody(data) {
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">
-                            <div class="tooltip-container" data-tooltip="Compares the most recent rating against the overall average.">
-                                Long-Term Baseline <span class="tooltip-icon">?</span>
-                            </div>
-                        </td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;"><div class="tooltip-container" data-tooltip="Compares the most recent rating against the overall average.">Long-Term Baseline <span class="tooltip-icon">?</span></div></td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Latest: <b>${latestVal.toFixed(2)}</b></td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">&ge; Hist. Avg (${avgScore.toFixed(2)})</td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(latestVal >= avgScore)}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">
-                            <div class="tooltip-container" data-tooltip="Average of the last 3 years, showing recent momentum.">
-                                Short-Term Momentum <span class="tooltip-icon">?</span>
-                            </div>
-                        </td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;"><div class="tooltip-container" data-tooltip="Average of the last 3 years, showing recent momentum.">Short-Term Momentum <span class="tooltip-icon">?</span></div></td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">3-Yr Avg: <b>${recentAvg.toFixed(2)}</b></td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">&ge; Hist. Avg (${historicalAvg.toFixed(2)})</td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(recentAvg >= historicalAvg)}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">
-                            <div class="tooltip-container" data-tooltip="Standard Deviation. Lower numbers mean a more consistent journal.">
-                                Volatility Index (StdDev) <span class="tooltip-icon">?</span>
-                            </div>
-                        </td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;"><div class="tooltip-container" data-tooltip="Standard Deviation. Lower numbers mean a more consistent journal.">Volatility Index (StdDev) <span class="tooltip-icon">?</span></div></td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">&sigma; = <b>${stdDev.toFixed(2)}</b></td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">&lt; 0.30 (Stability)</td>
                         <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(stdDev < 0.30)}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 12px;">
-                            <div class="tooltip-container" data-tooltip="Did the journal drop severely in the last year compared to its normal volatility?">
-                                Recent Anomaly (YoY) <span class="tooltip-icon">?</span>
-                            </div>
-                        </td>
+                        <td style="padding: 8px 12px;"><div class="tooltip-container" data-tooltip="Did the journal drop severely in the last year compared to its normal volatility?">Recent Anomaly (YoY) <span class="tooltip-icon">?</span></div></td>
                         <td style="padding: 8px 12px;">Change: <b>${yoyChange > 0 ? '+':''}${yoyChange.toFixed(2)}</b></td>
                         <td style="padding: 8px 12px; color: #666;">Drop &lt; 1 StdDev (${stdDev.toFixed(2)})</td>
                         <td style="padding: 8px 12px;">${statusBadge(yoyChange >= -stdDev)}</td>
@@ -384,74 +347,131 @@ export function renderAnalyticsBody(data) {
                 data: {
                     labels: ${chartYears},
                     datasets: [
-                        { 
-                            label: 'NAAS Rating', 
-                            data: ${chartValues}, 
-                            borderColor: '#0056b3', 
-                            backgroundColor: 'rgba(0, 86, 179, 0.05)', 
-                            fill: true, 
-                            tension: 0.3, 
-                            pointRadius: 5,
-                            order: 1
-                        },
-                        {
-                            label: 'Historical Average (${avgScore.toFixed(2)})',
-                            data: ${avgValues},
-                            borderColor: '#28a745',
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            fill: false,
-                            pointRadius: 0,
-                            order: 2
-                        }
+                        { label: 'NAAS Rating', data: ${chartValues}, borderColor: '#0056b3', backgroundColor: 'rgba(0, 86, 179, 0.05)', fill: true, tension: 0.3, pointRadius: 5, order: 1 },
+                        { label: 'Historical Average (${avgScore.toFixed(2)})', data: ${avgValues}, borderColor: '#28a745', borderWidth: 2, borderDash: [5, 5], fill: false, pointRadius: 0, order: 2 }
                     ]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: { tooltip: { enabled: true } }
-                }
+                options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip: { enabled: true } } }
             });
         }, 150);
     </script>
   `;
 }
 
+// ---------------------------------------------------------
+// NEW MULTI-JOURNAL COMPARE MODULE (HANDLES 2 TO 4 JOURNALS)
+// ---------------------------------------------------------
+export function renderCompareBody(journals) {
+    const colors = ['#0056b3', '#ff8c00', '#28a745', '#dc3545']; // Blue, Orange, Green, Red
+    
+    // STATE 1: PICKER (Less than 2 journals selected)
+    if (journals.length < 2) {
+        // If they arrived from a specific journal's "Compare" button, pre-load it.
+        const preSelectedJs = journals.length === 1 ? `addJournal('${journals[0].master_id}', '${journals[0].name.replace(/'/g, "\\'")}', '${journals[0].issn}');` : '';
 
-export function renderCompareBody(data1, data2, id1, failedSearch) {
-    // STATE 1: Journal 1 is selected, waiting for Journal 2
-    if (!data2) {
         return `
-        <div class="no-print" style="margin-bottom: 20px;">
-            <a href="/journal?id=${id1}" class="btn" style="background: #6c757d; font-size: 13px;">← Back to Analytics</a>
-        </div>
-        
         <div class="card" style="border-top: 5px solid var(--accent); text-align: center; padding-bottom: 40px;">
-            <h2 style="color: var(--primary); margin-bottom: 5px;">Compare Journals</h2>
-            <p style="color: #666; font-size: 15px;">You have selected <strong>${data1.name}</strong>.</p>
+            <h2 style="color: var(--primary); margin-bottom: 10px;">Compare Journals</h2>
+            <p style="color: #666; font-size: 15px; margin-bottom: 25px;">Search and select between 2 and 4 journals to instantly compare their NAAS ratings, historical averages, and trajectories.</p>
             
-            <div style="max-width: 600px; margin: 30px auto 0; background: #fafafa; padding: 25px; border-radius: 8px; border: 1px solid #eee;">
-                <h3 style="margin-top: 0; font-size: 16px; color: #333;">Select a second journal to compare:</h3>
+            <div style="max-width: 700px; margin: 0 auto; background: #fafafa; padding: 25px; border-radius: 8px; border: 1px solid #eee; text-align: left;">
                 
-                ${failedSearch ? `<div style="color: var(--danger); font-size: 13px; margin-bottom: 10px;">Could not find a journal matching "${failedSearch}". Please try again.</div>` : ''}
+                <div style="margin-bottom: 20px; position: relative;">
+                    <label style="font-size: 12px; font-weight: bold; color: #555;">SEARCH AND ADD JOURNAL</label>
+                    <input type="text" id="compare-search" autocomplete="off" placeholder="Type journal name or ISSN..." 
+                           style="width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 6px; font-size: 15px; margin-top: 5px;">
+                    <div class="autocomplete-dropdown" id="compare-dropdown"></div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #555;">SELECTED JOURNALS (<span id="sel-count">0</span>/4)</label>
+                    <ul id="selected-list" style="list-style: none; padding: 0; margin: 10px 0 0 0; display: flex; flex-direction: column; gap: 10px;">
+                        </ul>
+                </div>
                 
-                <form action="/compare" method="GET" style="position: relative; text-align: left;">
-                    <input type="hidden" name="id1" value="${id1}">
-                    <input type="text" id="main-search" name="search2" autocomplete="off" 
-                           placeholder="Type journal name or ISSN..." required
-                           style="width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 6px; font-size: 15px;">
-                    <div class="autocomplete-dropdown" id="search-dropdown"></div>
-                    <button type="submit" class="btn" style="width: 100%; margin-top: 15px; font-size: 16px; background: var(--accent);">Compare Now</button>
+                <form action="/compare" method="GET" id="compare-form" style="margin-top: 25px;">
+                    <div id="hidden-inputs"></div>
+                    <button type="submit" id="compare-btn" class="btn" style="width: 100%; font-size: 16px; background: var(--accent); opacity: 0.5; pointer-events: none; padding: 14px;">Select at least 2 journals</button>
                 </form>
             </div>
         </div>
+        <script>
+            // Isolated JavaScript for the Compare Picker Module
+            const cInp = document.getElementById('compare-search');
+            const cDd = document.getElementById('compare-dropdown');
+            const cList = document.getElementById('selected-list');
+            const hInputs = document.getElementById('hidden-inputs');
+            const cBtn = document.getElementById('compare-btn');
+            const cCount = document.getElementById('sel-count');
+            
+            let selected = [];
+
+            function updateUI() {
+                cList.innerHTML = '';
+                hInputs.innerHTML = '';
+                selected.forEach((j, idx) => {
+                    cList.innerHTML += \`<li style="background: white; border: 1px solid #ddd; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                        <div><strong style="color: var(--primary); font-size: 14px;">\${j.name}</strong> <span style="color: #888; font-size: 12px; margin-left: 10px; font-family: monospace;">ISSN: \${j.issn}</span></div>
+                        <button type="button" onclick="removeJournal('\${j.id}')" style="background: var(--danger); color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 11px; font-weight: bold;">Remove</button>
+                    </li>\`;
+                    hInputs.innerHTML += \`<input type="hidden" name="id\${idx+1}" value="\${j.id}">\`;
+                });
+                
+                cCount.innerText = selected.length;
+                if(selected.length >= 4) {
+                    cInp.placeholder = "Maximum of 4 journals selected. Remove one to add another.";
+                    cInp.disabled = true;
+                } else {
+                    cInp.placeholder = "Type journal name or ISSN...";
+                    cInp.disabled = false;
+                }
+
+                if(selected.length >= 2) {
+                    cBtn.style.opacity = '1';
+                    cBtn.style.pointerEvents = 'auto';
+                    cBtn.innerText = 'Compare ' + selected.length + ' Journals';
+                } else {
+                    cBtn.style.opacity = '0.5';
+                    cBtn.style.pointerEvents = 'none';
+                    cBtn.innerText = 'Select at least 2 journals';
+                }
+            }
+
+            window.addJournal = function(id, name, issn) {
+                if(selected.length >= 4) return;
+                if(selected.find(j => j.id === id)) { alert("Journal already added!"); } 
+                else { selected.push({id, name, issn}); updateUI(); }
+                cInp.value = '';
+                cDd.style.display = 'none';
+            };
+
+            window.removeJournal = function(id) {
+                selected = selected.filter(j => j.id !== id);
+                updateUI();
+            };
+
+            cInp.addEventListener('input', async () => {
+                const val = cInp.value.trim();
+                if(val.length < 2) { cDd.style.display = 'none'; return; }
+                try {
+                    const res = await fetch('/?ajax_search=' + encodeURIComponent(val));
+                    const data = await res.json();
+                    if(data.length > 0) {
+                        cDd.innerHTML = data.map(item => \`<div class="autocomplete-item" onclick="window.addJournal('\${item.master_id}', '\${item.Name.replace(/'/g, "\\\\'")}', '\${item.ISSN}')"><span style="display:block; font-weight:bold; color:var(--primary);">\${item.Name}</span><small style="color:#666;">ISSN: \${item.ISSN}</small></div>\`).join('');
+                        cDd.style.display = 'block';
+                    } else { cDd.style.display = 'none'; }
+                } catch (err) { console.error(err); }
+            });
+
+            document.addEventListener('click', (e) => { if (e.target !== cInp && e.target !== cDd) cDd.style.display = 'none'; });
+
+            // Execute pre-selection if passed via URL
+            ${preSelectedJs}
+        </script>
         `;
     }
 
-    // STATE 2: Both Journals Selected. Time for Analytics.
-    
-    // Helper function to calculate basic stats
+    // STATE 2: RESULTS (2 to 4 journals selected)
     const getStats = (ratings) => {
         if (!ratings || ratings.length === 0) return { avg: 0, latest: 0, year: 'N/A' };
         const sum = ratings.reduce((a, b) => a + b.rating, 0);
@@ -462,97 +482,99 @@ export function renderCompareBody(data1, data2, id1, failedSearch) {
         };
     };
 
-    const s1 = getStats(data1.ratings);
-    const s2 = getStats(data2.ratings);
+    const stats = journals.map(j => getStats(j.ratings));
 
-    // Unify all years for the Chart X-Axis
+    // Combine all years across all journals to create a unified timeline for the graph and table
     const yearsSet = new Set();
-    data1.ratings.forEach(r => yearsSet.add(r.year));
-    data2.ratings.forEach(r => yearsSet.add(r.year));
+    journals.forEach(j => j.ratings.forEach(r => yearsSet.add(r.year)));
     const allYears = Array.from(yearsSet).sort();
 
-    // Map ratings to the unified timeline (null if missing in a specific year)
     const getRatingForYear = (ratings, year) => {
         const found = ratings.find(r => r.year === year);
         return found ? found.rating : null;
     };
 
-    const d1Values = allYears.map(y => getRatingForYear(data1.ratings, y));
-    const d2Values = allYears.map(y => getRatingForYear(data2.ratings, y));
+    // Extract data arrays for each journal aligned perfectly to the unified timeline
+    const datasetsData = journals.map(j => allYears.map(y => getRatingForYear(j.ratings, y)));
 
-    // Build the comparative table rows (Reverse chronological)
+    // Generate Dynamic Summary Cards
+    let summaryCardsHtml = "";
+    journals.forEach((j, idx) => {
+        summaryCardsHtml += `
+        <div class="card" style="border-top: 5px solid ${colors[idx]}; margin: 0; padding: 20px;">
+            <div style="font-size: 11px; font-weight: bold; color: ${colors[idx]}; text-transform: uppercase; margin-bottom: 5px;">Journal ${idx + 1}</div>
+            <h3 style="margin: 0 0 10px 0; font-size: 15px; color: #333; line-height: 1.3;">${j.name}</h3>
+            <div style="font-family: monospace; font-size: 11px; color: #666; margin-bottom: 15px;">ISSN: ${j.issn}</div>
+            
+            <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #eee;">
+                <div style="text-align: left;">
+                    <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: bold;">Hist. Avg</div>
+                    <div style="font-size: 18px; font-weight: bold; color: #555;">${stats[idx].avg.toFixed(2)}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: bold;">Latest (${stats[idx].year})</div>
+                    <div style="font-size: 18px; font-weight: bold; color: ${colors[idx]};">${stats[idx].latest.toFixed(2)}</div>
+                </div>
+            </div>
+        </div>`;
+    });
+
+    // Generate Dynamic Table Rows (Reverse chronological)
     let tableRowsHtml = "";
     for (let i = allYears.length - 1; i >= 0; i--) {
         const year = allYears[i];
-        const val1 = d1Values[i];
-        const val2 = d2Values[i];
+        let rowCells = `<td style="padding: 12px; font-weight: bold;">${year}</td>`;
         
-        let diffHtml = '<span style="color:#999">-</span>';
-        if (val1 !== null && val2 !== null) {
-            const diff = val1 - val2;
-            const diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--accent)' : '#666');
-            diffHtml = `<strong style="color:${diffColor}">${diff > 0 ? '+' : ''}${diff.toFixed(2)}</strong>`;
-        }
+        journals.forEach((j, idx) => {
+            const val = datasetsData[idx][i];
+            rowCells += `<td style="padding: 12px; text-align: center;">${val !== null ? `<span style="background:${colors[idx]}; color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">${val.toFixed(2)}</span>` : '<span style="color:#ccc">N/A</span>'}</td>`;
+        });
 
-        tableRowsHtml += `
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 12px; font-weight: bold;">${year}</td>
-                <td style="padding: 12px; text-align: center;">${val1 !== null ? `<span style="background:var(--primary); color:white; padding:4px 8px; border-radius:4px;">${val1.toFixed(2)}</span>` : '<span style="color:#ccc">N/A</span>'}</td>
-                <td style="padding: 12px; text-align: center;">${val2 !== null ? `<span style="background:var(--accent); color:white; padding:4px 8px; border-radius:4px;">${val2.toFixed(2)}</span>` : '<span style="color:#ccc">N/A</span>'}</td>
-                <td style="padding: 12px; text-align: center; background: #fcfcfc;">${diffHtml}</td>
-            </tr>
-        `;
+        tableRowsHtml += `<tr style="border-bottom: 1px solid #eee;">${rowCells}</tr>`;
     }
 
+    // Dynamic Table Headers
+    let tableHeaders = '<th style="padding: 12px; background: #f8f9fa; text-align: left; width: 80px;">Year</th>';
+    journals.forEach((j, idx) => {
+        tableHeaders += `<th style="padding: 12px; background: #f8f9fa; text-align: center; color: ${colors[idx]}; font-size: 13px;">${j.issn}<br><span style="font-weight:normal; font-size:10px; color:#666;">Journal ${idx+1}</span></th>`;
+    });
+
+    // Chart.js JSON structure
+    const datasetsJson = journals.map((j, idx) => ({
+        label: j.name,
+        data: datasetsData[idx],
+        borderColor: colors[idx],
+        backgroundColor: colors[idx],
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
+        borderWidth: 3
+    }));
+
     return `
+    <style>
+        @media print {
+            body { background: white !important; color: black !important; }
+            header, footer, .page-title-strip, .btn, .no-print { display: none !important; }
+            .card { box-shadow: none !important; border: 1px solid #ccc !important; margin-bottom: 20px !important; page-break-inside: avoid; }
+            canvas { max-width: 100% !important; height: auto !important; }
+        }
+    </style>
+    
     <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <a href="/journal?id=${id1}" class="btn" style="background: #6c757d; font-size: 13px;">← Back to Analytics</a>
-        <button onclick="window.print()" class="btn" style="background: #17a2b8; font-size: 13px;">Save as PDF</button>
+        <a href="/compare" class="btn" style="background: #6c757d; font-size: 13px;">← New Comparison</a>
+        <button onclick="window.print()" class="btn" style="background: #17a2b8; font-size: 13px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:-2px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Save PDF
+        </button>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px;">
-        
-        <div class="card" style="border-top: 5px solid var(--primary); margin: 0;">
-            <div style="font-size: 11px; font-weight: bold; color: var(--primary); text-transform: uppercase; margin-bottom: 5px;">Journal A</div>
-            <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #333; line-height: 1.3;">${data1.name}</h3>
-            <div style="font-family: monospace; font-size: 12px; color: #666; margin-bottom: 15px;">ISSN: ${data1.issn}</div>
-            
-            <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #eee;">
-                <div style="text-align: left;">
-                    <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold;">10-Yr Avg</div>
-                    <div style="font-size: 22px; font-weight: bold; color: #555;">${s1.avg.toFixed(2)}</div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold;">Latest (${s1.year})</div>
-                    <div style="font-size: 22px; font-weight: bold; color: var(--primary);">${s1.latest.toFixed(2)}</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="border-top: 5px solid var(--accent); margin: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <div style="font-size: 11px; font-weight: bold; color: var(--accent); text-transform: uppercase;">Journal B</div>
-                <a href="/compare?id1=${id1}" style="font-size: 11px; color: #999; text-decoration: underline;" class="no-print">Change</a>
-            </div>
-            <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #333; line-height: 1.3;">${data2.name}</h3>
-            <div style="font-family: monospace; font-size: 12px; color: #666; margin-bottom: 15px;">ISSN: ${data2.issn}</div>
-            
-            <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #eee;">
-                <div style="text-align: left;">
-                    <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold;">10-Yr Avg</div>
-                    <div style="font-size: 22px; font-weight: bold; color: #555;">${s2.avg.toFixed(2)}</div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold;">Latest (${s2.year})</div>
-                    <div style="font-size: 22px; font-weight: bold; color: var(--accent);">${s2.latest.toFixed(2)}</div>
-                </div>
-            </div>
-        </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        ${summaryCardsHtml}
     </div>
 
     <div class="card">
-        <h3 style="margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px;">Longitudinal Comparison</h3>
-        <div style="height: 400px; width: 100%;"><canvas id="compareChart"></canvas></div>
+        <h3 style="margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px;">Longitudinal Comparison (Change in NAAS Rating)</h3>
+        <div style="height: 450px; width: 100%;"><canvas id="compareChart"></canvas></div>
     </div>
 
     <div class="card" style="padding: 0; overflow: hidden;">
@@ -560,14 +582,9 @@ export function renderCompareBody(data1, data2, id1, failedSearch) {
             <h3 style="margin: 0; font-size: 16px;">Comparative Data Matrix</h3>
         </div>
         <div style="overflow-x: auto;">
-            <table style="min-width: 600px; width: 100%; border-collapse: collapse;">
+            <table style="min-width: ${100 + journals.length * 150}px; width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr>
-                        <th style="padding: 12px; background: #f8f9fa; text-align: left; width: 100px;">Year</th>
-                        <th style="padding: 12px; background: #f8f9fa; text-align: center; color: var(--primary);">Journal A</th>
-                        <th style="padding: 12px; background: #f8f9fa; text-align: center; color: var(--accent);">Journal B</th>
-                        <th style="padding: 12px; background: #f8f9fa; text-align: center;">Differential (A - B)</th>
-                    </tr>
+                    <tr>${tableHeaders}</tr>
                 </thead>
                 <tbody>
                     ${tableRowsHtml}
@@ -583,28 +600,7 @@ export function renderCompareBody(data1, data2, id1, failedSearch) {
                 type: 'line',
                 data: {
                     labels: ${JSON.stringify(allYears)},
-                    datasets: [
-                        { 
-                            label: 'Journal A', 
-                            data: ${JSON.stringify(d1Values)}, 
-                            borderColor: '#0056b3', 
-                            backgroundColor: '#0056b3', 
-                            fill: false, 
-                            tension: 0.3, 
-                            pointRadius: 6,
-                            borderWidth: 3
-                        },
-                        { 
-                            label: 'Journal B', 
-                            data: ${JSON.stringify(d2Values)}, 
-                            borderColor: '#ff8c00', 
-                            backgroundColor: '#ff8c00', 
-                            fill: false, 
-                            tension: 0.3, 
-                            pointRadius: 6,
-                            borderWidth: 3
-                        }
-                    ]
+                    datasets: ${JSON.stringify(datasetsJson)}
                 },
                 options: { 
                     responsive: true, 
@@ -612,11 +608,9 @@ export function renderCompareBody(data1, data2, id1, failedSearch) {
                     interaction: { mode: 'index', intersect: false },
                     plugins: { 
                         tooltip: { enabled: true },
-                        legend: { position: 'top', labels: { usePointStyle: true, padding: 20 } }
+                        legend: { position: 'top', labels: { usePointStyle: true, padding: 15, font: { size: 11 } } }
                     },
-                    scales: {
-                        y: { title: { display: true, text: 'NAAS Rating' } }
-                    }
+                    scales: { y: { title: { display: true, text: 'NAAS Rating' } } }
                 }
             });
         }, 150);
