@@ -71,7 +71,7 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
     </div>` : ''}
 
     <script>
-      const inp = document.getElementById('main-search');
+     const inp = document.getElementById('main-search');
       const dd = document.getElementById('search-dropdown');
       if(inp) {
         inp.addEventListener('input', async () => {
@@ -82,11 +82,13 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
             const data = await res.json();
             if(data.length > 0) {
               dd.innerHTML = data.map(item => {
-                 const safeName = item.Name.replace(/'/g, "\\\\'");
-                 // Fixed string concatenation instead of nested backticks
+                 // HARDENED: Strip invisible line-breaks and nulls before escaping quotes
+                 const rawName = item.Name ? String(item.Name) : "Unknown";
+                 const safeName = rawName.replace(/[\r\n]+/g, " ").replace(/'/g, "\\\\'");
+                 
                  return '<div class="autocomplete-item" onclick="window.selectJournal(\\'' + safeName + '\\')">' +
-                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + item.Name + '</span>' +
-                        '<small style="color:#666;">ISSN: ' + item.ISSN + '</small></div>';
+                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
+                        '<small style="color:#666;">ISSN: ' + (item.ISSN || 'N/A') + '</small></div>';
               }).join('');
               dd.style.display = 'block';
             } else { dd.style.display = 'none'; }
