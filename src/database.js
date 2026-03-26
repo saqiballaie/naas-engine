@@ -5,12 +5,13 @@ export async function getLatestYear(db) {
 
 export async function searchJournals(db, year, term, min, max) {
   const cleanTerm = term.replace(/-/g, '').toUpperCase();
+  
   const query = `
     SELECT 
       m.main_display_name as Name, 
-      v.issn_original as ISSN, 
-      v.master_id,
-      (SELECT rating FROM naas_ratings WHERE issn_clean = v.issn_clean AND year = ?) as latest_score,
+      MAX(v.issn_original) as ISSN, 
+      m.master_id,
+      MAX(CASE WHEN r.year = ? THEN r.rating END) as latest_score,
       AVG(r.rating) as calculated_avg, 
       COUNT(r.rating) as valid_years
     FROM journal_master m 
@@ -18,11 +19,21 @@ export async function searchJournals(db, year, term, min, max) {
     LEFT JOIN naas_ratings r ON v.issn_clean = r.issn_clean
     WHERE (m.main_display_name LIKE ? OR v.issn_clean LIKE ?)
     GROUP BY m.master_id
-    HAVING (latest_score >= ? OR ? = '') AND (latest_score <= ? OR ? = '')
+    HAVING 
+      (? = '' OR latest_score >= CAST(? AS REAL)) AND 
+      (? = '' OR latest_score <= CAST(? AS REAL))
     ORDER BY latest_score DESC, calculated_avg DESC
-    LIMIT 100
+    LIMIT 150
   `;
-  const res = await db.prepare(query).bind(year, `%${term}%`, `%${cleanTerm}%`, min, min, max, max).all();
+
+  const res = await db.prepare(query).bind(
+    year, 
+    `%${term}%`, 
+    `%${cleanTerm}%`, 
+    min, min, 
+    max, max
+  ).all();
+
   return res.results || [];
 }
 
@@ -37,7 +48,7 @@ export async function getJournalMetrics(db, masterId) {
   `).bind(masterId).all();
   
   return {
-    name: journal ? journal.main_display_name : "Unknown",
+    name: journal ? journal.main_display_name : "Unknown Journal",
     issn: variant ? variant.issn_original : "N/A",
     ratings: ratings.results || []
   };
