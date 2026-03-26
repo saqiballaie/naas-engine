@@ -1,6 +1,6 @@
 import { layout } from './layout.js';
 import * as db from './database.js';
-import { renderSearchBody, renderAnalyticsBody, renderCompareBody } from './views.js'; 
+import { renderSearchBody, renderAnalyticsBody, renderCompareBody, renderStatisticsBody } from './views.js'; 
 
 export default {
   async fetch(request, env) {
@@ -10,7 +10,7 @@ export default {
     const path = url.pathname;
 
     try {
-      // 1. AUTOCOMPLETE API (Updated to pull master_id for the new Compare Picker)
+      // 1. AUTOCOMPLETE API
       if (url.searchParams.has("ajax_search")) {
         const term = url.searchParams.get("ajax_search");
         const results = await env.DB.prepare(`
@@ -22,7 +22,15 @@ export default {
         return new Response(JSON.stringify(results.results || []), { headers: { "Content-Type": "application/json" } });
       }
 
-      // 2. ANALYTICS PAGE
+      // 2. STATISTICS PAGE (New Analysis Section)
+      if (path === "/statistics") {
+        const stats = await db.getGlobalStats(env.DB);
+        return new Response(layout("Global Statistics", renderStatisticsBody(stats), path, stats.latestYear), { 
+          headers: { "Content-Type": "text/html" } 
+        });
+      }
+
+      // 3. ANALYTICS PAGE
       if (path === "/journal" || path === "/journalmetrics.php") {
         let mid = url.searchParams.get("id") || url.searchParams.get("master_id");
         const issn = url.searchParams.get("issn");
@@ -39,14 +47,14 @@ export default {
         return new Response(layout(data.name, renderAnalyticsBody(data), path, "N/A"), { headers: { "Content-Type": "text/html" } });
       }
 
-      // 3. COMPARE PAGE (Handles up to 4 Journals)
+      // 4. COMPARE PAGE
       if (path === "/compare" || path === "/compare.php") {
         const ids = [
             url.searchParams.get("id1"),
             url.searchParams.get("id2"),
             url.searchParams.get("id3"),
             url.searchParams.get("id4")
-        ].filter(id => id !== null); // Remove empty IDs
+        ].filter(id => id !== null);
 
         let journals = [];
         for (let id of ids) {
@@ -58,7 +66,7 @@ export default {
         return new Response(layout("Compare Journals", renderCompareBody(journals), path, "N/A"), { headers: { "Content-Type": "text/html" } });
       }
 
-      // 4. HOME / SEARCH PORTAL
+      // 5. HOME / SEARCH PORTAL
       const latestYear = await db.getLatestYear(env.DB);
       const search = url.searchParams.get("search") || "";
       const min = url.searchParams.get("min_rating") || "";
