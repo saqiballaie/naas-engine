@@ -1,5 +1,4 @@
 export function renderSearchBody(searchTerm, min, max, latestYear, results, isSearchSubmitted) {
-  // Safely serialize results for the CSV Export script
   const safeResults = JSON.stringify(results || []).replace(/</g, '\\u003c').replace(/`/g, '\\`');
 
   return `
@@ -83,24 +82,6 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                 </ul>
             </div>
         </div>
-
-        <div class="card" style="margin-top: 25px; border-left: 5px solid var(--primary); background: #fcfcfc;">
-            <div style="font-style: italic; font-size: 16px; color: #444; line-height: 1.6; margin-bottom: 15px;">
-                "Our goal is to bring deep statistical insight and transparency to the journal selection process. By analyzing historical volatility and momentum, we aim to empower agricultural scientists to make confident, data-driven decisions for their publication strategies."
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; border-top: 1px solid #eee; padding-top: 15px;">
-                <div>
-                    <h4 style="margin: 0 0 5px 0; font-size: 15px; color: #333;">Dr. Saqib Parvaze Allaie</h4>
-                    <p style="margin: 0; font-size: 13px; color: #666; font-weight: 500;">Subject Matter Specialist (Agricultural Engineering)</p>
-                    <p style="margin: 0; font-size: 12px; color: #888;">Krishi Vigyan Kendra (KVK), Shamli<br>Sardar Vallabhbhai Patel University of Agriculture and Technology (SVPUAT)</p>
-                </div>
-                <div>
-                    <h4 style="margin: 0 0 5px 0; font-size: 15px; color: #333;">Dr. Sabah Parvaze</h4>
-                    <p style="margin: 0; font-size: 13px; color: #666; font-weight: 500;">Assistant Professor (Agricultural Engineering)</p>
-                    <p style="margin: 0; font-size: 12px; color: #888;">College of Agricultural Engineering and Technology<br>Sher-e-Kashmir University of Agricultural Sciences and Technology of Kashmir (SKUAST-K)</p>
-                </div>
-            </div>
-        </div>
     ` : `
         <div class="card" style="padding: 0; overflow: hidden;">
             <div style="padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
@@ -114,8 +95,8 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                 </button>
             </div>
             
-            <div style="overflow-x: auto;">
-                <table style="min-width: 950px; width: 100%; border-collapse: collapse;">
+            <div class="table-responsive">
+                <table>
                     <thead>
                         <tr>
                             <th style="padding: 12px; background: #f8f9fa; text-align: left; width: 120px;">ISSN</th>
@@ -180,14 +161,12 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                 if (!data || data.length === 0) { alert("No data available to export."); return; }
                 
                 let csvContent = "ISSN,Journal Title,Latest Score,10-Yr Avg,Data Points\\n";
-                
                 data.forEach(row => {
                     const issn = row.ISSN ? row.ISSN.replace(/"/g, '""') : "N/A";
                     const title = row.Name ? '"' + row.Name.replace(/"/g, '""') + '"' : "Unknown";
                     const latest = row.latest_score !== null ? row.latest_score.toFixed(2) : "N/A";
                     const avg = row.calculated_avg !== null ? row.calculated_avg.toFixed(2) : "N/A";
                     const years = row.valid_years || 0;
-                    
                     csvContent += \`\${issn},\${title},\${latest},\${avg},\${years}\\n\`;
                 });
                 
@@ -206,9 +185,6 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
   `;
 }
 
-// ---------------------------------------------------------
-// ANALYTICS MODULE (NO CHANGES REQUIRED HERE)
-// ---------------------------------------------------------
 export function renderAnalyticsBody(data) {
   if (!data || !data.ratings || data.ratings.length === 0) {
     return `<div class="card" style="text-align:center; padding: 40px;"><h3>No Rating History Found</h3><p>We do not have historical data for <b>${data.name}</b>.</p><a href="/" class="btn">Back to Search</a></div>`;
@@ -216,7 +192,6 @@ export function renderAnalyticsBody(data) {
   
   const ratings = data.ratings;
   const n = ratings.length;
-  
   const scores = ratings.map(r => r.rating);
   const latestObj = ratings[n - 1];
   const previousObj = n > 1 ? ratings[n - 2] : null;
@@ -225,7 +200,6 @@ export function renderAnalyticsBody(data) {
 
   const sum = scores.reduce((a, b) => a + b, 0);
   const avgScore = sum / n;
-
   const variance = scores.reduce((a, b) => a + Math.pow(b - avgScore, 2), 0) / n;
   const stdDev = Math.sqrt(variance);
 
@@ -239,52 +213,42 @@ export function renderAnalyticsBody(data) {
       recentAvg = (scores[1] + scores[2]) / 2;
       historicalAvg = scores[0];
   }
-  
   const yoyChange = previousVal !== null ? latestVal - previousVal : 0;
 
-  let recStatus = "Recommended";
-  let recColor = "var(--success)";
-  let recReason = "";
+  // TIER-AWARE RECOMMENDATION ENGINE (FIXED)
+  let recStatus = "Recommended"; let recColor = "var(--success)"; let recReason = "";
+  const isSevereCrash = previousVal !== null && yoyChange < -Math.max(stdDev, 0.5); // Must be a real drop, not just a micro-fluctuation
+  const isUnderperforming = recentAvg < avgScore && latestVal < avgScore;
 
-  if (n < 3) {
-      if (latestVal >= avgScore) {
-          recStatus = "Recommended";
-          recReason = "Based on limited available data, the journal is maintaining its rating baseline.";
+  if (latestVal >= 10.0) {
+      // Elite Tier
+      if (isSevereCrash) {
+          recStatus = "Proceed with Caution"; recColor = "var(--accent)";
+          recReason = `Elite-tier journal (NAAS > 10.0), but experienced a severe recent drop in rating. Assess recent quality.`;
       } else {
-          recStatus = "Proceed with Caution";
-          recColor = "var(--accent)";
-          recReason = "Limited historical data shows a recent dip in the rating.";
+          recStatus = "Highly Recommended"; recColor = "var(--primary)"; // Primary Blue
+          recReason = `Top-tier journal with an exceptional NAAS rating. Excellent and prestigious publishing venue.`;
+      }
+  } else if (latestVal >= 6.0) {
+      // Strong Tier
+      if (isSevereCrash || (isUnderperforming && yoyChange < 0)) {
+          recStatus = "Proceed with Caution"; recColor = "var(--accent)";
+          recReason = `High-quality journal, but statistical trends show recent negative momentum. Monitor trajectory.`;
+      } else {
+          recStatus = "Recommended"; recColor = "var(--success)";
+          recReason = `Strong, high-quality journal maintaining solid ratings and baseline stability.`;
       }
   } else {
-      const isSevereCrash = previousVal !== null && yoyChange < -stdDev && stdDev > 0.3;
-      const isSevereSpike = previousVal !== null && yoyChange > stdDev && stdDev > 0.3;
-
-      if (recentAvg >= avgScore && latestVal >= avgScore && !isSevereCrash) {
-          recStatus = "Recommended";
-          recColor = "var(--success)";
-          recReason = `The journal demonstrates strong, sustained performance. Its recent 3-year momentum meets or exceeds its historical baseline.`;
-      } else if (isSevereSpike && historicalAvg < avgScore) {
-          recStatus = "Proceed with Caution";
-          recColor = "var(--accent)";
-          recReason = `Statistical anomaly detected: While the current rating spiked significantly this year, the older historical average is much lower. Verify if this recent quality improvement is sustainable.`;
-      } else if (isSevereCrash || (recentAvg < historicalAvg && latestVal < avgScore)) {
-          if (historicalAvg > avgScore + 0.2) {
-              recStatus = "Proceed with Caution";
-              recColor = "var(--accent)";
-              recReason = `This journal was historically strong, but statistical variance analysis reveals a severe recent decline. Exercise caution until ratings stabilize.`;
-          } else {
-              recStatus = "Not Recommended";
-              recColor = "var(--danger)";
-              recReason = `The journal shows a sustained downward trajectory. Its recent ratings have crashed below the historical average and standard deviation thresholds, indicating declining scientific impact.`;
-          }
-      } else if (recentAvg < avgScore) {
-          recStatus = "Not Recommended";
-          recColor = "var(--danger)";
-          recReason = `Statistical trends indicate a persistent underperformance, with the recent moving average remaining below the historical baseline.`;
+      // Standard Tier (Rely heavily on statistics)
+      if (isSevereCrash || isUnderperforming) {
+          recStatus = "Not Recommended"; recColor = "var(--danger)";
+          recReason = `Lower-tier journal exhibiting persistent downward momentum or high volatility. Seek better alternatives.`;
+      } else if (recentAvg > avgScore && yoyChange > 0) {
+          recStatus = "Recommended"; recColor = "var(--success)";
+          recReason = `Developing journal showing strong positive momentum above its historical baseline.`;
       } else {
-          recStatus = "Proceed with Caution";
-          recColor = "var(--accent)";
-          recReason = "The journal's performance is highly volatile and shows inconsistent statistical trends compared to its historical mean.";
+          recStatus = "Proceed with Caution"; recColor = "var(--accent)";
+          recReason = `Journal performance is fluctuating at a lower rating tier. Evaluate carefully before submitting.`;
       }
   }
 
@@ -298,12 +262,8 @@ export function renderAnalyticsBody(data) {
 
   let tableRowsHtml = "";
   for (let i = n - 1; i >= 0; i--) {
-      const current = ratings[i];
-      const prev = i > 0 ? ratings[i - 1] : null;
-      
-      const diffFromAvg = current.rating - avgScore;
-      const yoy = prev ? current.rating - prev.rating : 0;
-      
+      const current = ratings[i]; const prev = i > 0 ? ratings[i - 1] : null;
+      const diffFromAvg = current.rating - avgScore; const yoy = prev ? current.rating - prev.rating : 0;
       const avgColor = diffFromAvg >= 0 ? "var(--success)" : "var(--danger)";
       const yoyColor = yoy > 0 ? "var(--success)" : (yoy < 0 ? "var(--danger)" : "#666");
 
@@ -313,17 +273,24 @@ export function renderAnalyticsBody(data) {
             <td style="padding: 12px; text-align: center;"><span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${current.rating.toFixed(2)}</span></td>
             <td style="padding: 12px; text-align: center; color: ${yoyColor}; font-weight: bold;">${prev ? (yoy > 0 ? '+' : '') + yoy.toFixed(2) : '-'}</td>
             <td style="padding: 12px; text-align: center; color: ${avgColor}; font-weight: bold;">${(diffFromAvg > 0 ? '+' : '') + diffFromAvg.toFixed(2)}</td>
-        </tr>
-      `;
+        </tr>`;
   }
 
   const statusBadge = (condition) => condition ? `<span style="background:var(--success); color:white; padding:2px 6px; border-radius:4px; font-size:11px;">PASS</span>` : `<span style="background:var(--danger); color:white; padding:2px 6px; border-radius:4px; font-size:11px;">FAIL/WARN</span>`;
 
   return `
     <style>
-        .tooltip-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #e9ecef; color: #6c757d; font-size: 10px; font-weight: bold; cursor: help; margin-left: 4px; border: 1px solid #ced4da; }
+        .tooltip-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #e2e8f0; color: #64748b; font-size: 10px; font-weight: bold; cursor: help; margin-left: 4px; border: 1px solid #cbd5e1; }
         .tooltip-container { position: relative; display: inline-flex; align-items: center; }
-        .tooltip-container:hover::after { content: attr(data-tooltip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: normal; white-space: nowrap; z-index: 10; margin-bottom: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none; }
+        .tooltip-container:hover::after { 
+            content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); 
+            background: #1e293b; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px; 
+            font-weight: normal; white-space: normal; width: 220px; text-align: center; line-height: 1.4;
+            z-index: 9999; margin-bottom: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); pointer-events: none; 
+        }
+        @media (max-width: 768px) {
+            .tooltip-container:hover::after { left: auto; right: -20px; transform: none; width: 180px; }
+        }
         @media print {
             body { background: white !important; color: black !important; }
             header, footer, .page-title-strip, .btn, .no-print { display: none !important; }
@@ -388,8 +355,8 @@ export function renderAnalyticsBody(data) {
         <div style="padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa;">
             <h3 style="margin: 0; font-size: 16px;">Historical Data Matrix</h3>
         </div>
-        <div style="overflow-x: auto;">
-            <table style="min-width: 600px; width: 100%; border-collapse: collapse;">
+        <div class="table-responsive">
+            <table>
                 <thead>
                     <tr>
                         <th style="padding: 12px; background: #f8f9fa; text-align: left;">Year</th>
@@ -421,8 +388,8 @@ export function renderAnalyticsBody(data) {
         <p style="font-size: 13px; color: #888; margin-bottom: 20px;"><em>Reasoning: ${recReason}</em></p>
         
         <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #444; text-transform: uppercase;">Decision Matrix Calculations</h4>
-        <div style="overflow-x: auto; border: 1px solid #eee; border-radius: 6px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+        <div class="table-responsive" style="border: 1px solid #eee;">
+            <table style="font-size: 13px; text-align: left;">
                 <thead style="background: #f8f9fa;">
                     <tr>
                         <th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Evaluation Metric</th>
@@ -453,8 +420,8 @@ export function renderAnalyticsBody(data) {
                     <tr>
                         <td style="padding: 8px 12px;"><div class="tooltip-container" data-tooltip="Did the journal drop severely in the last year compared to its normal volatility?">Recent Anomaly (YoY) <span class="tooltip-icon">?</span></div></td>
                         <td style="padding: 8px 12px;">Change: <b>${yoyChange > 0 ? '+':''}${yoyChange.toFixed(2)}</b></td>
-                        <td style="padding: 8px 12px; color: #666;">Drop &lt; 1 StdDev (${stdDev.toFixed(2)})</td>
-                        <td style="padding: 8px 12px;">${statusBadge(yoyChange >= -stdDev)}</td>
+                        <td style="padding: 8px 12px; color: #666;">Drop &lt; 0.50 (or 1 StdDev)</td>
+                        <td style="padding: 8px 12px;">${statusBadge(yoyChange >= -Math.max(stdDev, 0.5))}</td>
                     </tr>
                 </tbody>
             </table>
@@ -479,9 +446,6 @@ export function renderAnalyticsBody(data) {
   `;
 }
 
-// ---------------------------------------------------------
-// COMPARE MODULE (NO CHANGES REQUIRED HERE)
-// ---------------------------------------------------------
 export function renderCompareBody(journals) {
     const defaultColors = ['#0056b3', '#ff8c00', '#28a745', '#dc3545']; 
     
@@ -576,51 +540,41 @@ export function renderCompareBody(journals) {
         
         const sum = scores.reduce((a, b) => a + b, 0);
         const avgScore = sum / n;
-
         const variance = scores.reduce((a, b) => a + Math.pow(b - avgScore, 2), 0) / n;
         const stdDev = Math.sqrt(variance);
 
-        let recentAvg = latestVal;
-        let historicalAvg = avgScore;
+        let recentAvg = latestVal; let historicalAvg = avgScore;
         if (n >= 4) {
             recentAvg = (scores[n-1] + scores[n-2] + scores[n-3]) / 3;
             const histScores = scores.slice(0, n-3);
             historicalAvg = histScores.reduce((a, b) => a + b, 0) / histScores.length;
         } else if (n === 3) {
-            recentAvg = (scores[1] + scores[2]) / 2;
-            historicalAvg = scores[0];
+            recentAvg = (scores[1] + scores[2]) / 2; historicalAvg = scores[0];
         }
 
         const yoyChange = prevVal !== null ? latestVal - prevVal : 0;
-        const compositeScore = (latestVal * 0.40) + (recentAvg * 0.40) + (avgScore * 0.20) - (stdDev * 0.25);
+        
+        // Ranking relies heavily on absolute NAAS score so top tier journals always win
+        const compositeScore = (latestVal * 0.60) + (recentAvg * 0.20) + (avgScore * 0.20) - (stdDev * 0.25);
 
+        // TIER-AWARE RECOMMENDATION ENGINE (FIXED)
         let recStatus = "Recommended"; let recColor = "var(--success)";
-        if (n < 3) {
-            if (latestVal < avgScore) { recStatus = "Caution"; recColor = "var(--accent)"; }
-        } else {
-            const isSevereCrash = prevVal !== null && yoyChange < -stdDev && stdDev > 0.3;
-            const isSevereSpike = prevVal !== null && yoyChange > stdDev && stdDev > 0.3;
+        const isSevereCrash = prevVal !== null && yoyChange < -Math.max(stdDev, 0.5);
+        const isUnderperforming = recentAvg < avgScore && latestVal < avgScore;
 
-            if (recentAvg >= avgScore && latestVal >= avgScore && !isSevereCrash) {
-                recStatus = "Recommended"; recColor = "var(--success)";
-            } else if (isSevereSpike && historicalAvg < avgScore) {
-                recStatus = "Caution"; recColor = "var(--accent)";
-            } else if (isSevereCrash || (recentAvg < historicalAvg && latestVal < avgScore)) {
-                if (historicalAvg > avgScore + 0.2) { recStatus = "Caution"; recColor = "var(--accent)"; } 
-                else { recStatus = "Not Recommended"; recColor = "var(--danger)"; }
-            } else if (recentAvg < avgScore) {
-                recStatus = "Not Recommended"; recColor = "var(--danger)";
-            } else {
-                recStatus = "Caution"; recColor = "var(--accent)";
-            }
+        if (latestVal >= 10.0) {
+            if (isSevereCrash) { recStatus = "Caution"; recColor = "var(--accent)"; } 
+            else { recStatus = "Highly Recommended"; recColor = "var(--primary)"; }
+        } else if (latestVal >= 6.0) {
+            if (isSevereCrash || (isUnderperforming && yoyChange < 0)) { recStatus = "Caution"; recColor = "var(--accent)"; } 
+            else { recStatus = "Recommended"; recColor = "var(--success)"; }
+        } else {
+            if (isSevereCrash || isUnderperforming) { recStatus = "Not Recommended"; recColor = "var(--danger)"; } 
+            else if (recentAvg > avgScore && yoyChange > 0) { recStatus = "Recommended"; recColor = "var(--success)"; } 
+            else { recStatus = "Caution"; recColor = "var(--accent)"; }
         }
 
-        return {
-            ...journal, originalIndex, color: defaultColors[originalIndex],
-            latest: latestVal, year: ratings[n-1].year, avg: avgScore,
-            stdDev: stdDev, recentAvg: recentAvg, score: compositeScore,
-            recStatus: recStatus, recColor: recColor
-        };
+        return { ...journal, originalIndex, color: defaultColors[originalIndex], latest: latestVal, year: ratings[n-1].year, avg: avgScore, stdDev: stdDev, recentAvg: recentAvg, score: compositeScore, recStatus: recStatus, recColor: recColor };
     };
 
     let analyzedJournals = journals.map((j, idx) => calculateAdvancedStats(j, idx));
@@ -628,8 +582,7 @@ export function renderCompareBody(journals) {
     
     analyzedJournals = analyzedJournals.map(j => {
         const rankIndex = sortedByScore.findIndex(sorted => sorted.master_id === j.master_id);
-        j.rank = rankIndex + 1;
-        return j;
+        j.rank = rankIndex + 1; return j;
     });
 
     const rankMedals = { 1: '🥇 1st', 2: '🥈 2nd', 3: '🥉 3rd', 4: '4th' };
@@ -679,18 +632,15 @@ export function renderCompareBody(journals) {
     }
 
     let tableHeaders = '<th style="padding: 12px; background: #f8f9fa; text-align: left; width: 80px;">Year</th>';
-    analyzedJournals.forEach((j) => {
-        tableHeaders += `<th style="padding: 12px; background: #f8f9fa; text-align: center; color: ${j.color}; font-size: 13px;">${j.issn}<br><span style="font-weight:normal; font-size:10px; color:#666;">Rank ${j.rank}</span></th>`;
-    });
+    analyzedJournals.forEach((j) => { tableHeaders += `<th style="padding: 12px; background: #f8f9fa; text-align: center; color: ${j.color}; font-size: 13px;">${j.issn}<br><span style="font-weight:normal; font-size:10px; color:#666;">Rank ${j.rank}</span></th>`; });
 
     const datasetsJson = analyzedJournals.map((j, idx) => ({
-        label: `[Rank ${j.rank}] ${j.name}`,
-        data: datasetsData[idx],
-        borderColor: j.color, backgroundColor: j.color, fill: false, tension: 0.3, pointRadius: 5, borderWidth: 3
+        label: `[Rank ${j.rank}] ${j.name}`, data: datasetsData[idx], borderColor: j.color, backgroundColor: j.color, fill: false, tension: 0.3, pointRadius: 5, borderWidth: 3
     }));
 
     return `
     <style>
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
         @media print {
             body { background: white !important; color: black !important; }
             header, footer, .page-title-strip, .btn, .no-print { display: none !important; }
@@ -711,8 +661,8 @@ export function renderCompareBody(journals) {
     </div>
 
     <div class="card" style="background: #f8f9fa; border: 1px dashed #ccc; padding: 15px 20px; font-size: 12px; color: #555;">
-        <strong style="color: #333;">How is the Rank calculated?</strong> The engine uses a composite algorithm to find the most robust journal. <br>
-        <code style="display: inline-block; margin-top: 5px; background: #fff; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">Composite Score = (Latest Rating × 0.40) + (3-Yr Momentum × 0.40) + (10-Yr Avg × 0.20) - (Volatility Penalty)</code>
+        <strong style="color: #333;">How is the Rank calculated?</strong> The engine uses a tier-aware composite algorithm to find the most robust journal. <br>
+        <code style="display: inline-block; margin-top: 5px; background: #fff; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">Score = (Latest Rating × 0.60) + (3-Yr Momentum × 0.20) + (10-Yr Avg × 0.20) - (Volatility Penalty)</code>
     </div>
 
     <div class="card">
@@ -724,8 +674,8 @@ export function renderCompareBody(journals) {
         <div style="padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa;">
             <h3 style="margin: 0; font-size: 16px;">Comparative Data Matrix</h3>
         </div>
-        <div style="overflow-x: auto;">
-            <table style="min-width: ${100 + journals.length * 150}px; width: 100%; border-collapse: collapse;">
+        <div class="table-responsive">
+            <table style="min-width: ${100 + journals.length * 150}px;">
                 <thead><tr>${tableHeaders}</tr></thead>
                 <tbody>${tableRowsHtml}</tbody>
             </table>
