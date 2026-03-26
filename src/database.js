@@ -4,17 +4,27 @@ export async function getLatestYear(db) {
 }
 
 export async function searchJournals(db, year, term, min, max) {
-  const cleanTerm = term.replace(/-/g, '');
+  const cleanTerm = term.replace(/-/g, '').toUpperCase();
+  
+  // We use a Subquery to ensure we filter specifically on the LATEST year's rating
   return await db.prepare(`
-    SELECT m.main_display_name as Name, v.issn_original as ISSN, v.master_id,
-           MAX(CASE WHEN r.year = ? THEN r.rating END) as latest_score,
-           AVG(r.rating) as calculated_avg, COUNT(r.rating) as valid_years
-    FROM journal_master m JOIN journal_variants v ON m.master_id = v.master_id
+    SELECT 
+      m.main_display_name as Name, 
+      v.issn_original as ISSN, 
+      v.master_id,
+      (SELECT rating FROM naas_ratings WHERE issn_clean = v.issn_clean AND year = ?) as latest_score,
+      AVG(r.rating) as calculated_avg, 
+      COUNT(r.rating) as valid_years
+    FROM journal_master m 
+    JOIN journal_variants v ON m.master_id = v.master_id
     LEFT JOIN naas_ratings r ON v.issn_clean = r.issn_clean
     WHERE (m.main_display_name LIKE ? OR v.issn_clean LIKE ?)
     GROUP BY m.master_id
-    HAVING (latest_score >= ? OR ? = '') AND (latest_score <= ? OR ? = '')
+    HAVING 
+      (latest_score >= ? OR ? = '') AND 
+      (latest_score <= ? OR ? = '')
     ORDER BY latest_score DESC, calculated_avg DESC
+    LIMIT 100
   `).bind(year, `%${term}%`, `%${cleanTerm}%`, min, min, max, max).all();
 }
 
