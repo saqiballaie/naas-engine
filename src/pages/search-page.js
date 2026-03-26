@@ -1,8 +1,26 @@
 import { escapeHTML } from '../utils.js';
 
 export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitted) {
+    // Add this snippet into the return string of renderSearchPage()
+const utilityBlock = `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 30px;">
+        <div class="card" style="margin:0; border-left: 4px solid #0284c7; padding: 15px;">
+            <h4 style="margin:0 0 5px 0; color:#0369a1; font-size:14px;">📋 Recruitment Verification</h4>
+            <p style="margin:0; font-size:12px; color:#64748b;">Instant validation of NAAS scores for recruitment panels and CAS selection committees to ensure applicant data integrity.</p>
+        </div>
+        <div class="card" style="margin:0; border-left: 4px solid #16a34a; padding: 15px;">
+            <h4 style="margin:0 0 5px 0; color:#15803d; font-size:14px;">🛡️ Anti-Fraud Shield</h4>
+            <p style="margin:0; font-size:12px; color:#64748b;">ISSN-anchored cross-verification to detect and prevent fraud by 'clone' or predatory journals mimicking legitimate titles.</p>
+        </div>
+        <div class="card" style="margin:0; border-left: 4px solid var(--accent); padding: 15px;">
+            <h4 style="margin:0 0 5px 0; color:#b45309; font-size:14px;">📈 Longitudinal Analytics</h4>
+            <p style="margin:0; font-size:12px; color:#64748b;">10-year historical trajectory and volatility indexing to help scientists choose stable, high-impact publication venues.</p>
+        </div>
+    </div>
+`;
     const safeTerm = escapeHTML(searchTerm);
     return `
+    
     <div class="card" style="border-top: 5px solid var(--primary);">
         <form action="/" method="GET" id="search-form" style="max-width: 900px; margin: 0 auto; text-align: left;">
             <div style="margin-bottom: 20px; position: relative;">
