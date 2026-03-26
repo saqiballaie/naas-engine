@@ -12,8 +12,8 @@ export function renderHeader(path) {
             
             <div style="font-size: 11px; font-weight: 600; text-align: right; line-height: 1.4; border-left: 2px solid #e2e8f0; padding-left: 15px; max-width: 450px;">
                 <span style="color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; display: block;">A joint initiative by</span>
-                <a href="https://www.svbpmeerut.ac.in/" target="_blank" rel="noopener noreferrer" class="uni-link">Sardar Vallabhbhai Patel University of Agriculture and Technology</a>
-                <span style="color: #cbd5e1; margin: 0 4px;">&</span>
+                <a href="https://www.svpuat.edu.in//" target="_blank" rel="noopener noreferrer" class="uni-link">Sardar Vallabhbhai Patel University of Agriculture and Technology</a>
+               <br> <span style="color: #cbd5e1; margin: 0 4px;">&</span>
                 <a href="https://www.skuastkashmir.ac.in/" target="_blank" rel="noopener noreferrer" class="uni-link">Sher-e-Kashmir University of Agricultural Sciences and Technology of Kashmir</a>
             </div>
         </div>
