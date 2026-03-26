@@ -9,9 +9,12 @@ export function renderHeader(path) {
             <div class="logo">
                 <h1 style="margin: 0; color: var(--primary); font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">NAAS Insights Engine</h1>
             </div>
-            <div style="font-size: 12px; color: #64748b; font-weight: 600; text-align: right; line-height: 1.4; border-left: 2px solid #e2e8f0; padding-left: 15px;">
-                A joint initiative by<br>
-                <span style="color: #475569;">SVPUAT</span> & <span style="color: #475569;">SKUAST-Kashmir</span>
+            
+            <div style="font-size: 11px; font-weight: 600; text-align: right; line-height: 1.4; border-left: 2px solid #e2e8f0; padding-left: 15px; max-width: 450px;">
+                <span style="color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; display: block;">A joint initiative by</span>
+                <a href="https://www.svbpmeerut.ac.in/" target="_blank" rel="noopener noreferrer" class="uni-link">Sardar Vallabhbhai Patel University of Agriculture and Technology</a>
+                <span style="color: #cbd5e1; margin: 0 4px;">&</span>
+                <a href="https://www.skuastkashmir.ac.in/" target="_blank" rel="noopener noreferrer" class="uni-link">Sher-e-Kashmir University of Agricultural Sciences and Technology of Kashmir</a>
             </div>
         </div>
 
@@ -24,6 +27,7 @@ export function renderHeader(path) {
         </nav>
 
         <style>
+            /* Navigation Styles */
             .nav-link { 
                 display: block;
                 color: rgba(255,255,255,0.8); 
@@ -44,10 +48,29 @@ export function renderHeader(path) {
                 border-bottom: 3px solid var(--accent);
             }
             
+            /* University Link Styles */
+            .uni-link {
+                color: #475569;
+                text-decoration: none;
+                transition: color 0.2s ease;
+            }
+            .uni-link:hover {
+                color: var(--primary);
+                text-decoration: underline;
+            }
+            
             /* Mobile adjustments */
             @media (max-width: 768px) {
                 header > div { flex-direction: column; align-items: flex-start; }
-                header > div > div:nth-child(2) { text-align: left; border-left: none; padding-left: 0; border-top: 2px solid #e2e8f0; padding-top: 10px; width: 100%; }
+                header > div > div:nth-child(2) { 
+                    text-align: left; 
+                    border-left: none; 
+                    padding-left: 0; 
+                    border-top: 2px solid #e2e8f0; 
+                    padding-top: 10px; 
+                    width: 100%; 
+                    max-width: 100%;
+                }
                 .nav-link { padding: 12px 15px; font-size: 13px; }
             }
         </style>
