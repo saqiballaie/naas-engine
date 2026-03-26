@@ -5,7 +5,7 @@ export async function getLatestYear(db) {
 
 // Add 'page' to the parameters, default to 1
 export async function searchJournals(db, year, search, min, max, page = 1) {
-    const limit = 50; // Show 50 per page for better speed
+    const limit = 50;
     const offset = (page - 1) * limit;
 
     let whereClause = "";
@@ -19,14 +19,19 @@ export async function searchJournals(db, year, search, min, max, page = 1) {
     if (max) { whereClause += " AND r.rating <= ?"; params.push(parseFloat(max)); }
 
     const query = `
-        SELECT m.main_display_name as name, MAX(v.issn_original) as issn, r.rating, m.master_id
+        SELECT 
+            m.main_display_name as name, 
+            MAX(v.issn_original) as issn, 
+            r.rating, 
+            m.master_id,
+            (SELECT AVG(rating) FROM naas_ratings WHERE issn_clean = v.issn_clean) as avg_rating
         FROM journal_master m
         JOIN journal_variants v ON m.master_id = v.master_id
         JOIN naas_ratings r ON v.issn_clean = r.issn_clean
         WHERE r.year = ? ${whereClause}
         GROUP BY m.master_id
-        ORDER BY m.main_display_name ASC
-        LIMIT ? OFFSET ?`; // Add LIMIT and OFFSET
+        ORDER BY r.rating DESC, m.main_display_name ASC 
+        LIMIT ? OFFSET ?`; 
     
     params.push(limit, offset);
 
