@@ -1,29 +1,66 @@
 export function renderFooter() {
-  const currentYear = new Date().getFullYear();
   return `
     <footer style="margin-top: 50px; background: #1e293b; color: #f8f9fa; padding: 50px 20px 30px;">
         <div style="max-width: 1100px; margin: 0 auto;">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 40px;">
                 <div>
                     <h3 style="color: #fff; margin-bottom: 15px; font-size: 20px;">NAAS Insights Engine</h3>
-                    <p style="font-size: 14px; color: #94a3b8;">Analytical platform for longitudinal performance metrics of scientific journals.</p>
+                    <p style="font-size: 14px; color: #94a3b8; line-height: 1.6;">Analytical platform for longitudinal performance metrics and trend evaluations of scientific agricultural journals.</p>
                 </div>
                 <div>
-                    <h4 style="font-size: 12px; text-transform: uppercase; color: #64748b;">Project Lead</h4>
-                    <p style="margin: 0; font-weight: bold; color: #f1f5f9;">Dr. Saqib Parvaze Allaie</p>
-                    <p style="margin: 0; font-size: 12px; color: #cbd5e1;">KVK Shamli, SVPUAT</p>
+                    <h4 style="font-size: 12px; text-transform: uppercase; color: #64748b; margin-bottom: 8px;">Project Lead</h4>
+                    <p style="margin: 0 0 5px 0;">
+                        <a href="https://www.linkedin.com/in/saqibparvaze/" target="_blank" rel="noopener noreferrer" class="author-link">Dr. Saqib Parvaze Allaie</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+                        Subject Matter Specialist (Agricultural Engineering)<br>
+                        Krishi Vigyan Kendra (KVK), Shamli<br>
+                        Sardar Vallabhbhai Patel University of Agriculture and Technology
+                    </p>
                 </div>
                 <div>
-                    <h4 style="font-size: 12px; text-transform: uppercase; color: #64748b;">Co-Developer</h4>
-                    <p style="margin: 0; font-weight: bold; color: #f1f5f9;">Dr. Sabah Parvaze</p>
-                    <p style="margin: 0; font-size: 12px; color: #cbd5e1;">CoAE&T, SKUAST-Kashmir</p>
+                    <h4 style="font-size: 12px; text-transform: uppercase; color: #64748b; margin-bottom: 8px;">Co-Developer</h4>
+                    <p style="margin: 0 0 5px 0;">
+                        <a href="https://www.linkedin.com/in/sabah-parvaze-67a769ab/" target="_blank" rel="noopener noreferrer" class="author-link">Dr. Sabah Parvaze</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+                        Assistant Professor (Agricultural Engineering)<br>
+                        College of Agricultural Engineering and Technology (CoAE&T)<br>
+                        Sher-e-Kashmir University of Agricultural Sciences and Technology of Kashmir
+                    </p>
                 </div>
             </div>
             <div style="margin-top: 25px; display: flex; justify-content: space-between; font-size: 12px; color: #64748b;">
-                <span>&copy; ${currentYear} | Academic & Research Purposes</span>
-                <span>Version 1.1.0</span>
+                <span>&copy; ${new Date().getFullYear()} | Academic & Research Purposes</span>
+                <span>Version 1.2.1</span>
             </div>
         </div>
+        
+        <style>
+            .author-link {
+                color: #f1f5f9;
+                font-weight: bold;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                transition: color 0.2s ease;
+                font-size: 14px;
+            }
+            .author-link::after {
+                content: '🔗';
+                font-size: 10px;
+                opacity: 0.6;
+                transition: opacity 0.2s ease;
+            }
+            .author-link:hover {
+                color: #38bdf8; /* Bright highlight color */
+                text-decoration: underline;
+            }
+            .author-link:hover::after {
+                opacity: 1;
+            }
+        </style>
     </footer>
   `;
 }
