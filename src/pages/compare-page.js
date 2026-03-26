@@ -41,10 +41,11 @@ export function renderComparePage(journals) {
     <div class="card"><h3 style="margin-top: 0; color: #334155;">Historical Trajectory</h3><div style="height: 400px;"><canvas id="compareChart"></canvas></div></div>
     <div class="card" style="padding: 0; overflow: hidden;"><div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;"><h3 style="margin: 0; font-size: 16px; color: #334155;">10-Year Historical Data</h3></div><div class="table-responsive" style="border: none; border-radius: 0;"><table><thead><tr style="background: #ffffff;"><th style="color: #64748b; font-size: 12px; text-transform: uppercase; width: 80px;">Year</th>${processedJournals.map(j => `<th style="color: #1e293b; font-size: 12px;">${j.name}</th>`).join('')}</tr></thead><tbody>${sortedYearsDesc.map(year => `<tr><td style="font-weight: bold; color: #475569;">${year}</td>${processedJournals.map(j => {const rating = j.ratingsByYear[year]; return `<td style="color: ${rating ? '#334155' : '#cbd5e1'}; font-weight: ${rating ? '600' : 'normal'};">${rating ? rating.toFixed(2) : '-'}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div></div>` : ''}
 
-    <script>
+<script>
         let selected = ${JSON.stringify(preselected)};
         function updateUI() {
             const list = document.getElementById('selected-list'); const hidden = document.getElementById('hidden-inputs'); const searchInp = document.getElementById('compare-search');
+            
             list.innerHTML = selected.map(j => '<li style="padding: 12px 15px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">' +
                                                '<span style="font-weight: 600; color: #334155; font-size: 14px;">' + j.name + ' <small style="color:#94a3b8; font-weight:normal;">(ISSN: ' + j.issn + ')</small></span>' +
                                                '<button type="button" onclick="window.removeJ(\\'' + j.id + '\\')" style="background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; font-weight: bold;">✖ Remove</button></li>').join('');
@@ -56,32 +57,50 @@ export function renderComparePage(journals) {
         window.removeJ = (id) => { selected = selected.filter(x => x.id !== id); updateUI(); if(selected.length > 0) document.getElementById('compare-form').submit(); else window.location.href = '/compare'; };
         updateUI();
 
-        const inp = document.getElementById('main-search');
-      const dd = document.getElementById('search-dropdown');
-      if(inp) {
-        inp.addEventListener('input', async () => {
-          const val = inp.value.trim();
-          if(val.length < 2) { dd.style.display = 'none'; return; }
-          try {
-            const res = await fetch('/?ajax_search=' + encodeURIComponent(val));
-            const data = await res.json();
-            if(data.length > 0) {
-              dd.innerHTML = data.map(item => {
-                 // HARDENED: Strip invisible line-breaks and nulls before escaping quotes
-                 const rawName = item.Name ? String(item.Name) : "Unknown";
-                 const safeName = rawName.replace(/[\r\n]+/g, " ").replace(/'/g, "\\\\'");
-                 
-                 return '<div class="autocomplete-item" onclick="window.selectJournal(\\'' + safeName + '\\')">' +
-                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
-                        '<small style="color:#666;">ISSN: ' + (item.ISSN || 'N/A') + '</small></div>';
-              }).join('');
-              dd.style.display = 'block';
-            } else { dd.style.display = 'none'; }
-          } catch (err) { console.error(err); }
-        });
-        window.selectJournal = function(val) { inp.value = val; dd.style.display = 'none'; document.getElementById('search-form').submit(); };
-        document.addEventListener('click', (e) => { if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; });
-      }
+        const inp = document.getElementById('compare-search'); 
+        const dd = document.getElementById('compare-dropdown');
+        
+        if(inp) {
+            inp.addEventListener('input', async () => {
+                const val = inp.value.trim(); if(val.length < 2) { dd.style.display = 'none'; return; }
+                try {
+                    const res = await fetch('/?ajax_search=' + encodeURIComponent(val)); 
+                    const data = await res.json();
+                    if(data.length > 0) {
+                        dd.innerHTML = data.map(item => {
+                            if(selected.some(s => s.id == item.master_id)) return ''; // Hide already selected
+                            
+                            const rawName = item.Name ? String(item.Name) : "Unknown";
+                            const cleanName = rawName.replace(/"/g, '&quot;');
+                            const issn = item.ISSN || 'N/A';
+                            
+                            // Safe data attributes
+                            return '<div class="autocomplete-item" data-id="' + item.master_id + '" data-name="' + cleanName + '" data-issn="' + issn + '">' +
+                                   '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
+                                   '<small style="color:#666;">ISSN: ' + issn + '</small></div>';
+                        }).join('');
+                        dd.style.display = dd.innerHTML.trim() === '' ? 'none' : 'block';
+                    } else { dd.style.display = 'none'; }
+                } catch (err) { console.error("Autocomplete Error:", err); }
+            });
+
+            // Event Delegation for clicking a compare result
+            dd.addEventListener('click', (e) => {
+                const item = e.target.closest('.autocomplete-item');
+                if (item && selected.length < 5) {
+                    const id = item.getAttribute('data-id');
+                    const name = item.getAttribute('data-name');
+                    const issn = item.getAttribute('data-issn');
+                    
+                    selected.push({id, name, issn}); 
+                    inp.value = ''; 
+                    dd.style.display = 'none'; 
+                    updateUI();
+                }
+            });
+
+            document.addEventListener('click', (e) => { if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; });
+        }
         
         ${processedJournals.length > 0 ? `
         setTimeout(() => { 
