@@ -4,8 +4,8 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
   return `
     <style>
         .quick-filters { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
-        .filter-chip { background: var(--primary-light); color: var(--primary); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid rgba(0, 86, 179, 0.2); transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .filter-chip:hover { background: var(--primary); color: white; border-color: var(--primary); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .filter-chip { background: var(--primary-light); color: var(--primary); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid rgba(0, 86, 179, 0.2); transition: all 0.2s ease; }
+        .filter-chip:hover { background: var(--primary); color: white; border-color: var(--primary); }
         .trust-badge { display: inline-flex; align-items: center; gap: 6px; background: #e8f5e9; color: var(--success); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 20px; border: 1px solid #c3e6cb; }
     </style>
 
@@ -34,7 +34,7 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                     <label style="font-size: 11px; font-weight: 800; color: #666; text-transform: uppercase;">Max Rating (${latestYear})</label>
                     <input type="number" step="0.01" name="max_rating" value="${max}" style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 6px;">
                 </div>
-                <button type="submit" class="btn" style="height: 48px;">SEARCH DATABASE</button>
+                <button type="submit" class="btn" style="height: 48px;">SEARCH</button>
             </div>
 
             <div class="quick-filters">
@@ -57,32 +57,28 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
     ${!isSearchSubmitted ? `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 25px;">
             <div class="card" style="margin: 0; border-top: 4px solid var(--success);">
-                <h3 style="margin-top: 0; font-size: 18px;">What is this platform?</h3>
-                <p style="font-size: 14px; color: #555; line-height: 1.6;">The <strong>NAAS Insights Engine</strong> provides 10-year longitudinal analysis of journal ratings. It uses statistical momentum to recommend stable venues for research.</p>
+                <h3 style="margin-top: 0; font-size: 18px;">Analytical Platform</h3>
+                <p style="font-size: 14px; color: #555; line-height: 1.6;">The NAAS Insights Engine provides 10-year longitudinal analysis of journal ratings to help researchers identify stable publishing venues.</p>
             </div>
             <div class="card" style="margin: 0; border-top: 4px solid var(--accent);">
                 <h3 style="margin-top: 0; font-size: 18px;">How to use</h3>
-                <ul style="font-size: 14px; color: #555; line-height: 1.6; padding-left: 20px;">
-                    <li><strong>Search:</strong> Find journals by Name or ISSN.</li>
-                    <li><strong>Analyze:</strong> View trajectory and algorithmic recommendations.</li>
-                    <li><strong>Compare:</strong> Pit up to 4 journals side-by-side.</li>
-                </ul>
+                <p style="font-size: 14px; color: #555; line-height: 1.6;">Search by ISSN or Name above. Use the Analytics button on results to see deep trends and statistical recommendations.</p>
             </div>
         </div>
     ` : `
         <div class="card" style="padding: 0; overflow: hidden;">
-            <div style="padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div style="padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 18px;">Search Results (${results.length})</h3>
                 <button onclick="downloadCSV()" class="btn" style="padding: 8px 15px; font-size: 12px; background: var(--success);">Export CSV</button>
             </div>
             
-            <div class="table-responsive">
-                <table style="min-width: 900px; width: 100%; border-collapse: collapse;">
+            <div style="width: 100%; overflow-x: auto;">
+                <table style="min-width: 850px; width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr style="background: #f8f9fa;">
+                        <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
                             <th style="padding: 12px; text-align: left;">ISSN</th>
                             <th style="padding: 12px; text-align: left;">Journal Title</th>
-                            <th style="padding: 12px; text-align: center;">Latest (${latestYear})</th>
+                            <th style="padding: 12px; text-align: center;">Latest</th>
                             <th style="padding: 12px; text-align: center;">10-Yr Avg</th>
                             <th style="padding: 12px; text-align: center;">Trend</th>
                             <th style="padding: 12px; text-align: center;">Actions</th>
@@ -99,11 +95,11 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                             }
                             return `
                             <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 12px; font-family: monospace;">${row.ISSN}</td>
-                                <td style="padding: 12px;"><strong>${row.Name}</strong></td>
-                                <td style="padding: 12px; text-align: center;">${latest !== null ? `<span style="background:var(--primary); color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">${latest.toFixed(2)}</span>` : 'N/A'}</td>
-                                <td style="padding: 12px; text-align: center;">${avg !== null ? avg.toFixed(2) : 'N/A'}</td>
-                                <td style="padding: 12px; text-align: center; color: ${tC}; font-weight: bold;">${tI} (${dD})</td>
+                                <td style="padding: 12px; font-family: monospace; font-size: 13px;">${row.ISSN}</td>
+                                <td style="padding: 12px; font-size: 14px;"><strong>${row.Name}</strong></td>
+                                <td style="padding: 12px; text-align: center;">${latest !== null ? '<span style="background:var(--primary); color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">' + latest.toFixed(2) + '</span>' : 'N/A'}</td>
+                                <td style="padding: 12px; text-align: center; font-size: 14px;">${avg !== null ? avg.toFixed(2) : 'N/A'}</td>
+                                <td style="padding: 12px; text-align: center; color: ${tC}; font-weight: bold; font-size: 13px;">${tI} (${dD})</td>
                                 <td style="padding: 12px; text-align: center;">
                                     <div style="display:flex; gap:5px; justify-content:center;">
                                         <a href="/journal?id=${row.master_id}" class="btn" style="padding:6px 10px; font-size:11px; background:var(--success);">📊 Metrics</a>
@@ -115,7 +111,6 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                     </tbody>
                 </table>
             </div>
-            ${results.length >= 150 ? `<div style="padding: 15px 20px; background: #fffdf8; text-align: center; font-size: 13px; color: #d9534f;">⚠️ Showing top 150 matching results.</div>` : ''}
         </div>
         <script>
             function downloadCSV() {
@@ -134,30 +129,36 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
 export function renderAnalyticsBody(data) {
   const ratings = data.ratings; const n = ratings.length;
   const scores = ratings.map(r => r.rating);
-  const latestVal = scores[n - 1]; const latestYear = ratings[n-1].year;
-  const prevVal = n > 1 ? scores[n - 2] : null;
+  const latestObj = ratings[n - 1]; 
+  const latestVal = latestObj.rating;
+  const latestYear = latestObj.year;
+  
+  const previousObj = n > 1 ? ratings[n - 2] : null;
+  const previousVal = previousObj ? previousObj.rating : null; // FIXED: Added missing variable
+  
   const avgScore = scores.reduce((a, b) => a + b, 0) / n;
   const variance = scores.reduce((a, b) => a + Math.pow(b - avgScore, 2), 0) / n;
   const stdDev = Math.sqrt(variance);
   
   let recentAvg = latestVal; let historicalAvg = avgScore;
   if (n >= 4) { recentAvg = (scores[n-1] + scores[n-2] + scores[n-3]) / 3; historicalAvg = scores.slice(0, n-3).reduce((a,b)=>a+b,0) / (n-3); }
-  const yoyChange = prevVal !== null ? latestVal - prevVal : 0;
+  const yoyChange = previousVal !== null ? latestVal - previousVal : 0;
 
+  // Tier-Aware Recommendation Engine
   let recStatus = "Recommended"; let recColor = "var(--success)"; let recReason = "";
   const isSevereCrash = previousVal !== null && yoyChange < -Math.max(stdDev, 0.5);
   const isUnderperforming = recentAvg < avgScore && latestVal < avgScore;
 
   if (latestVal >= 10.0) {
-      if (isSevereCrash) { recStatus = "Caution"; recColor = "var(--accent)"; recReason = "Elite tier but severe drop."; } 
-      else { recStatus = "Highly Recommended"; recColor = "var(--primary)"; recReason = "Exceptional NAAS rating."; }
+      if (isSevereCrash) { recStatus = "Proceed with Caution"; recColor = "var(--accent)"; recReason = "Elite tier but experienced a sharp drop recently."; } 
+      else { recStatus = "Highly Recommended"; recColor = "var(--primary)"; recReason = "Exceptional world-class NAAS rating."; }
   } else if (latestVal >= 6.0) {
-      if (isSevereCrash || (isUnderperforming && yoyChange < 0)) { recStatus = "Caution"; recColor = "var(--accent)"; recReason = "Strong tier but declining momentum."; } 
-      else { recStatus = "Recommended"; recColor = "var(--success)"; recReason = "Solid quality and stability."; }
+      if (isSevereCrash || (isUnderperforming && yoyChange < 0)) { recStatus = "Proceed with Caution"; recColor = "var(--accent)"; recReason = "Strong tier but showing declining momentum."; } 
+      else { recStatus = "Recommended"; recColor = "var(--success)"; recReason = "Solid quality with stable historical performance."; }
   } else {
-      if (isSevereCrash || isUnderperforming) { recStatus = "Not Recommended"; recColor = "var(--danger)"; recReason = "Declining trajectory in lower tier."; } 
-      else if (recentAvg > avgScore && yoyChange > 0) { recStatus = "Recommended"; recColor = "var(--success)"; recReason = "Strong positive momentum."; } 
-      else { recStatus = "Caution"; recColor = "var(--accent)"; recReason = "Fluctuating performance."; }
+      if (isSevereCrash || isUnderperforming) { recStatus = "Not Recommended"; recColor = "var(--danger)"; recReason = "Sustained downward trajectory in a lower tier."; } 
+      else if (recentAvg > avgScore && yoyChange > 0) { recStatus = "Recommended"; recColor = "var(--success)"; recReason = "Growing journal with strong positive momentum."; } 
+      else { recStatus = "Proceed with Caution"; recColor = "var(--accent)"; recReason = "Fluctuating performance; monitor before submission."; }
   }
 
   const chartLabels = JSON.stringify(ratings.map(r => r.year));
@@ -170,7 +171,8 @@ export function renderAnalyticsBody(data) {
     <style>
         .tooltip-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #e2e8f0; color: #64748b; font-size: 10px; font-weight: bold; cursor: help; margin-left: 4px; border: 1px solid #cbd5e1; }
         .tooltip-container { position: relative; display: inline-flex; align-items: center; }
-        .tooltip-container:hover::after { content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px; white-space: normal; width: 220px; text-align: center; z-index: 99; }
+        .tooltip-container:hover::after { content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px; white-space: normal; width: 220px; text-align: center; line-height: 1.4; z-index: 999; }
+        @media (max-width: 768px) { .tooltip-container:hover::after { left: auto; right: -20px; transform: none; width: 180px; } }
     </style>
     <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <a href="/" class="btn" style="background: #6c757d; font-size: 13px;">← Back</a>
@@ -186,7 +188,7 @@ export function renderAnalyticsBody(data) {
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
         <div class="card" style="text-align: center; border-left: 5px solid #6c757d; margin: 0; padding: 15px;">
             <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Hist. Avg</small>
-            <div style="font-size: 24px; font-weight: bold;">${avgScore.toFixed(2)}</div>
+            <div style="font-size: 24px; font-weight: bold; color: #6c757d;">${avgScore.toFixed(2)}</div>
         </div>
         <div class="card" style="text-align: center; border-left: 5px solid var(--primary); margin: 0; padding: 15px;">
             <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Latest (${latestYear})</small>
@@ -208,15 +210,15 @@ export function renderAnalyticsBody(data) {
     <div class="card" style="border-left: 5px solid ${recColor}; background: #fffcfc;">
         <h3 style="margin-top: 0; color: #333; font-size: 16px;">Decision Matrix Calculations</h3>
         <p style="font-size: 14px; color: #555;">${recReason}</p>
-        <div class="table-responsive" style="margin-top:15px; border: 1px solid #eee;">
-            <table style="font-size: 13px; text-align: left; width: 100%;">
+        <div style="width: 100%; overflow-x: auto; margin-top:15px; border: 1px solid #eee;">
+            <table style="font-size: 13px; text-align: left; width: 100%; min-width: 400px;">
                 <thead style="background: #f8f9fa;">
                     <tr><th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Metric</th><th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Value</th><th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Target</th><th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Status</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Baseline</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${latestVal.toFixed(2)}</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">&ge; ${avgScore.toFixed(2)}</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(latestVal >= avgScore)}</td></tr>
-                    <tr><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Momentum (3y)</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${recentAvg.toFixed(2)}</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">&ge; ${historicalAvg.toFixed(2)}</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(recentAvg >= historicalAvg)}</td></tr>
-                    <tr><td style="padding: 8px 12px;">Volatility (&sigma;)</td><td style="padding: 8px 12px;">${stdDev.toFixed(2)}</td><td style="padding: 8px 12px;">&lt; 0.30</td><td style="padding: 8px 12px;">${statusBadge(stdDev < 0.30)}</td></tr>
+                    <tr><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Baseline</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${latestVal.toFixed(2)}</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee; color:#666;">&ge; ${avgScore.toFixed(2)}</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(latestVal >= avgScore)}</td></tr>
+                    <tr><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Momentum (3y)</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${recentAvg.toFixed(2)}</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee; color:#666;">&ge; ${historicalAvg.toFixed(2)}</td><td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(recentAvg >= historicalAvg)}</td></tr>
+                    <tr><td style="padding: 8px 12px;">Volatility (&sigma;)</td><td style="padding: 8px 12px;">${stdDev.toFixed(2)}</td><td style="padding: 8px 12px; color:#666;">&lt; 0.30</td><td style="padding: 8px 12px;">${statusBadge(stdDev < 0.30)}</td></tr>
                 </tbody>
             </table>
         </div>
@@ -240,11 +242,10 @@ export function renderCompareBody(journals) {
         return `
         <div class="card" style="border-top: 5px solid var(--accent); text-align: center; padding-bottom: 40px;">
             <h2 style="color: var(--primary); margin-bottom: 10px;">Compare & Rank Journals</h2>
-            <p style="color: #666; font-size: 15px; margin-bottom: 25px;">Select up to 4 journals to analyze historical trajectory and rank them automatically.</p>
             <div style="max-width: 700px; margin: 0 auto; background: #fafafa; padding: 25px; border-radius: 8px; border: 1px solid #eee; text-align: left;">
                 <div style="margin-bottom: 20px; position: relative;">
                     <label style="font-size: 12px; font-weight: bold; color: #555;">SEARCH AND ADD JOURNAL</label>
-                    <input type="text" id="compare-search" autocomplete="off" placeholder="Type journal name or ISSN..." style="width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 6px; font-size: 15px; margin-top: 5px;">
+                    <input type="text" id="compare-search" autocomplete="off" placeholder="Type journal name or ISSN..." style="width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 6px; font-size: 15px;">
                     <div class="autocomplete-dropdown" id="compare-dropdown"></div>
                 </div>
                 <div style="margin-bottom: 20px;">
@@ -253,7 +254,7 @@ export function renderCompareBody(journals) {
                 </div>
                 <form action="/compare" method="GET" id="compare-form" style="margin-top: 25px;">
                     <div id="hidden-inputs"></div>
-                    <button type="submit" id="compare-btn" class="btn" style="width: 100%; font-size: 16px; background: var(--accent); opacity: 0.5; pointer-events: none; padding: 14px;">Select at least 2 journals</button>
+                    <button type="submit" id="compare-btn" class="btn" style="width: 100%; font-size: 16px; background: var(--accent); opacity: 0.5; pointer-events: none; padding: 14px;">Compare Journals</button>
                 </form>
             </div>
         </div>
