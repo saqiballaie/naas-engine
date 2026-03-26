@@ -53,3 +53,44 @@ export async function getJournalMetrics(db, masterId) {
     ratings: ratings.results || []
   };
 }
+export async function getGlobalStats(db) {
+  // 1. Annual Averages and Counts
+  const yearlyTrends = await db.prepare(`
+    SELECT year, AVG(rating) as avg_rating, COUNT(*) as journal_count 
+    FROM naas_ratings 
+    GROUP BY year ORDER BY year ASC
+  `).all();
+
+  // 2. Current Tier Distribution (Categorization)
+  const latestYear = await getLatestYear(db);
+  const distribution = await db.prepare(`
+    SELECT 
+      CASE 
+        WHEN rating >= 9.0 THEN 'Elite (9.0+)'
+        WHEN rating >= 7.0 THEN 'High (7.0-8.9)'
+        WHEN rating >= 5.0 THEN 'Mid (5.0-6.9)'
+        ELSE 'Developing (<5.0)'
+      END as tier,
+      COUNT(*) as count
+    FROM naas_ratings 
+    WHERE year = ?
+    GROUP BY tier
+  `).bind(latestYear).all();
+
+  // 3. Top 10 Journals overall
+  const topJournals = await db.prepare(`
+    SELECT m.main_display_name as Name, r.rating, v.issn_original as ISSN
+    FROM naas_ratings r
+    JOIN journal_variants v ON r.issn_clean = v.issn_clean
+    JOIN journal_master m ON v.master_id = m.master_id
+    WHERE r.year = ?
+    ORDER BY r.rating DESC LIMIT 10
+  `).bind(latestYear).all();
+
+  return {
+    yearlyTrends: yearlyTrends.results,
+    distribution: distribution.results,
+    topJournals: topJournals.results,
+    latestYear
+  };
+}
