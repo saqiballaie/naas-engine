@@ -20,7 +20,7 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
             <div style="margin-bottom: 20px; position: relative;">
                 <label style="font-size: 11px; font-weight: 800; color: #666; text-transform: uppercase;">Journal Name or ISSN</label>
                 <input type="text" id="main-search" name="search" autocomplete="off" value="${searchTerm}" 
-                       placeholder="Search across 3,500+ agricultural & scientific journals..." 
+                       placeholder="Search across 3,500+ journals..." 
                        style="width: 100%; padding: 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 16px; margin-top: 5px;">
                 <div class="autocomplete-dropdown" id="search-dropdown"></div>
             </div>
@@ -58,14 +58,14 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 25px;">
             <div class="card" style="margin: 0; border-top: 4px solid var(--success);">
                 <h3 style="margin-top: 0; font-size: 18px;">What is this platform?</h3>
-                <p style="font-size: 14px; color: #555; line-height: 1.6;">The <strong>NAAS Insights Engine</strong> is a joint initiative providing a 10-year longitudinal analysis of journal ratings. It uses statistical momentum and volatility to recommend stable venues for research.</p>
+                <p style="font-size: 14px; color: #555; line-height: 1.6;">The <strong>NAAS Insights Engine</strong> provides 10-year longitudinal analysis of journal ratings. It uses statistical momentum to recommend stable venues for research.</p>
             </div>
             <div class="card" style="margin: 0; border-top: 4px solid var(--accent);">
                 <h3 style="margin-top: 0; font-size: 18px;">How to use</h3>
                 <ul style="font-size: 14px; color: #555; line-height: 1.6; padding-left: 20px;">
                     <li><strong>Search:</strong> Find journals by Name or ISSN.</li>
-                    <li><strong>Analyze:</strong> Click <span style="background:var(--success); color:white; padding:2px 4px; border-radius:3px; font-size:10px;">Metrics</span> for deep trends.</li>
-                    <li><strong>Compare:</strong> Compare up to 4 journals side-by-side.</li>
+                    <li><strong>Analyze:</strong> View trajectory and algorithmic recommendations.</li>
+                    <li><strong>Compare:</strong> Pit up to 4 journals side-by-side.</li>
                 </ul>
             </div>
         </div>
@@ -77,7 +77,7 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
             </div>
             
             <div class="table-responsive">
-                <table style="min-width: 900px;">
+                <table style="min-width: 900px; width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="background: #f8f9fa;">
                             <th style="padding: 12px; text-align: left;">ISSN</th>
@@ -101,13 +101,13 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 12px; font-family: monospace;">${row.ISSN}</td>
                                 <td style="padding: 12px;"><strong>${row.Name}</strong></td>
-                                <td style="padding: 12px; text-align: center;">${latest !== null ? \`<span style="background:var(--primary); color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">\${latest.toFixed(2)}</span>\` : 'N/A'}</td>
-                                <td style="padding: 12px; text-align: center;">\${avg !== null ? avg.toFixed(2) : 'N/A'}</td>
-                                <td style="padding: 12px; text-align: center; color: \${tC}; font-weight: bold;">\${tI} (\${dD})</td>
+                                <td style="padding: 12px; text-align: center;">${latest !== null ? `<span style="background:var(--primary); color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">${latest.toFixed(2)}</span>` : 'N/A'}</td>
+                                <td style="padding: 12px; text-align: center;">${avg !== null ? avg.toFixed(2) : 'N/A'}</td>
+                                <td style="padding: 12px; text-align: center; color: ${tC}; font-weight: bold;">${tI} (${dD})</td>
                                 <td style="padding: 12px; text-align: center;">
                                     <div style="display:flex; gap:5px; justify-content:center;">
-                                        <a href="/journal?id=\${row.master_id}" class="btn" style="padding:6px 10px; font-size:11px; background:var(--success);">📊 Metrics</a>
-                                        <a href="https://www.google.com/search?q=ISSN+\${row.ISSN}" target="_blank" class="btn" style="padding:6px 10px; font-size:11px; background:#4285F4;">🔍 Search</a>
+                                        <a href="/journal?id=${row.master_id}" class="btn" style="padding:6px 10px; font-size:11px; background:var(--success);">📊 Metrics</a>
+                                        <a href="https://www.google.com/search?q=ISSN+${row.ISSN}" target="_blank" class="btn" style="padding:6px 10px; font-size:11px; background:#4285F4;">🔍 Search</a>
                                     </div>
                                 </td>
                             </tr>`;
@@ -115,12 +115,13 @@ export function renderSearchBody(searchTerm, min, max, latestYear, results, isSe
                     </tbody>
                 </table>
             </div>
+            ${results.length >= 150 ? `<div style="padding: 15px 20px; background: #fffdf8; text-align: center; font-size: 13px; color: #d9534f;">⚠️ Showing top 150 matching results.</div>` : ''}
         </div>
         <script>
             function downloadCSV() {
                 const data = ${safeResults};
                 let csv = "ISSN,Journal Title,Latest Score,Avg\\n";
-                data.forEach(r => csv += \`\${r.ISSN},"\${r.Name}",\${r.latest_score},\${r.calculated_avg}\\n\`);
+                data.forEach(r => { csv += (r.ISSN||'N/A') + ',"' + (r.Name||'Unknown') + '",' + (r.latest_score||'0') + ',' + (r.calculated_avg||'0') + "\\n"; });
                 const blob = new Blob([csv], { type: 'text/csv' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a"); a.href = url; a.download = "NAAS_Export.csv"; a.click();
@@ -143,20 +144,20 @@ export function renderAnalyticsBody(data) {
   if (n >= 4) { recentAvg = (scores[n-1] + scores[n-2] + scores[n-3]) / 3; historicalAvg = scores.slice(0, n-3).reduce((a,b)=>a+b,0) / (n-3); }
   const yoyChange = prevVal !== null ? latestVal - prevVal : 0;
 
-  // Tier-Aware Recommendation
   let recStatus = "Recommended"; let recColor = "var(--success)"; let recReason = "";
-  const isSevereCrash = prevVal !== null && yoyChange < -Math.max(stdDev, 0.5);
+  const isSevereCrash = previousVal !== null && yoyChange < -Math.max(stdDev, 0.5);
   const isUnderperforming = recentAvg < avgScore && latestVal < avgScore;
 
   if (latestVal >= 10.0) {
-      if (isSevereCrash) { recStatus = "Proceed with Caution"; recColor = "var(--accent)"; recReason = "Elite tier but severe drop."; } 
+      if (isSevereCrash) { recStatus = "Caution"; recColor = "var(--accent)"; recReason = "Elite tier but severe drop."; } 
       else { recStatus = "Highly Recommended"; recColor = "var(--primary)"; recReason = "Exceptional NAAS rating."; }
   } else if (latestVal >= 6.0) {
-      if (isSevereCrash || (isUnderperforming && yoyChange < 0)) { recStatus = "Proceed with Caution"; recColor = "var(--accent)"; recReason = "Strong tier but declining momentum."; } 
+      if (isSevereCrash || (isUnderperforming && yoyChange < 0)) { recStatus = "Caution"; recColor = "var(--accent)"; recReason = "Strong tier but declining momentum."; } 
       else { recStatus = "Recommended"; recColor = "var(--success)"; recReason = "Solid quality and stability."; }
   } else {
       if (isSevereCrash || isUnderperforming) { recStatus = "Not Recommended"; recColor = "var(--danger)"; recReason = "Declining trajectory in lower tier."; } 
-      else { recStatus = "Proceed with Caution"; recColor = "var(--accent)"; recReason = "Fluctuating performance."; }
+      else if (recentAvg > avgScore && yoyChange > 0) { recStatus = "Recommended"; recColor = "var(--success)"; recReason = "Strong positive momentum."; } 
+      else { recStatus = "Caution"; recColor = "var(--accent)"; recReason = "Fluctuating performance."; }
   }
 
   const chartLabels = JSON.stringify(ratings.map(r => r.year));
@@ -169,7 +170,7 @@ export function renderAnalyticsBody(data) {
     <style>
         .tooltip-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #e2e8f0; color: #64748b; font-size: 10px; font-weight: bold; cursor: help; margin-left: 4px; border: 1px solid #cbd5e1; }
         .tooltip-container { position: relative; display: inline-flex; align-items: center; }
-        .tooltip-container:hover::after { content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px; white-space: normal; width: 220px; text-align: center; line-height: 1.4; z-index: 999; }
+        .tooltip-container:hover::after { content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px; white-space: normal; width: 220px; text-align: center; z-index: 99; }
     </style>
     <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <a href="/" class="btn" style="background: #6c757d; font-size: 13px;">← Back</a>
@@ -185,7 +186,7 @@ export function renderAnalyticsBody(data) {
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
         <div class="card" style="text-align: center; border-left: 5px solid #6c757d; margin: 0; padding: 15px;">
             <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Hist. Avg</small>
-            <div style="font-size: 24px; font-weight: bold; color: #6c757d;">${avgScore.toFixed(2)}</div>
+            <div style="font-size: 24px; font-weight: bold;">${avgScore.toFixed(2)}</div>
         </div>
         <div class="card" style="text-align: center; border-left: 5px solid var(--primary); margin: 0; padding: 15px;">
             <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Latest (${latestYear})</small>
@@ -208,7 +209,7 @@ export function renderAnalyticsBody(data) {
         <h3 style="margin-top: 0; color: #333; font-size: 16px;">Decision Matrix Calculations</h3>
         <p style="font-size: 14px; color: #555;">${recReason}</p>
         <div class="table-responsive" style="margin-top:15px; border: 1px solid #eee;">
-            <table style="font-size: 13px; text-align: left;">
+            <table style="font-size: 13px; text-align: left; width: 100%;">
                 <thead style="background: #f8f9fa;">
                     <tr><th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Metric</th><th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Value</th><th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Target</th><th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Status</th></tr>
                 </thead>
@@ -234,7 +235,58 @@ export function renderAnalyticsBody(data) {
 
 export function renderCompareBody(journals) {
     const colors = ['#0056b3', '#ff8c00', '#28a745', '#dc3545'];
-    if (journals.length < 2) return `<div class="card" style="text-align: center; padding: 40px;"><h3>Select journals to compare.</h3><a href="/" class="btn" style="margin-top: 20px;">Back to Search</a></div>`;
+    
+    if (journals.length < 2) {
+        return `
+        <div class="card" style="border-top: 5px solid var(--accent); text-align: center; padding-bottom: 40px;">
+            <h2 style="color: var(--primary); margin-bottom: 10px;">Compare & Rank Journals</h2>
+            <p style="color: #666; font-size: 15px; margin-bottom: 25px;">Select up to 4 journals to analyze historical trajectory and rank them automatically.</p>
+            <div style="max-width: 700px; margin: 0 auto; background: #fafafa; padding: 25px; border-radius: 8px; border: 1px solid #eee; text-align: left;">
+                <div style="margin-bottom: 20px; position: relative;">
+                    <label style="font-size: 12px; font-weight: bold; color: #555;">SEARCH AND ADD JOURNAL</label>
+                    <input type="text" id="compare-search" autocomplete="off" placeholder="Type journal name or ISSN..." style="width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 6px; font-size: 15px; margin-top: 5px;">
+                    <div class="autocomplete-dropdown" id="compare-dropdown"></div>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #555;">SELECTED (<span id="sel-count">0</span>/4)</label>
+                    <ul id="selected-list" style="list-style: none; padding: 0; margin: 10px 0 0 0; display: flex; flex-direction: column; gap: 10px;"></ul>
+                </div>
+                <form action="/compare" method="GET" id="compare-form" style="margin-top: 25px;">
+                    <div id="hidden-inputs"></div>
+                    <button type="submit" id="compare-btn" class="btn" style="width: 100%; font-size: 16px; background: var(--accent); opacity: 0.5; pointer-events: none; padding: 14px;">Select at least 2 journals</button>
+                </form>
+            </div>
+        </div>
+        <script>
+            const cI = document.getElementById('compare-search'), cD = document.getElementById('compare-dropdown'), cL = document.getElementById('selected-list'), hI = document.getElementById('hidden-inputs'), cB = document.getElementById('compare-btn'), cC = document.getElementById('sel-count');
+            let selected = [];
+            function updateUI() {
+                cL.innerHTML = ''; hI.innerHTML = '';
+                selected.forEach((j, i) => {
+                    cL.innerHTML += '<li style="background: white; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between;"><div><strong>' + j.name + '</strong></div><button type="button" onclick="removeJournal(\\''+j.id+'\\')" style="background:var(--danger);color:white;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;">X</button></li>';
+                    hI.innerHTML += '<input type="hidden" name="id'+(i+1)+'" value="'+j.id+'">';
+                });
+                cC.innerText = selected.length;
+                cB.style.opacity = selected.length >= 2 ? '1' : '0.5';
+                cB.style.pointerEvents = selected.length >= 2 ? 'auto' : 'none';
+            }
+            window.addJournal = function(id, name, issn) {
+                if(selected.length >= 4) return;
+                if(!selected.find(j => j.id === id)) { selected.push({id, name, issn}); updateUI(); }
+                cI.value = ''; cD.style.display = 'none';
+            };
+            window.removeJournal = function(id) { selected = selected.filter(j => j.id !== id); updateUI(); };
+            cI.addEventListener('input', async () => {
+                const v = cI.value.trim(); if(v.length < 2) return;
+                const r = await fetch('/?ajax_search=' + encodeURIComponent(v));
+                const d = await r.json();
+                if(d.length > 0) {
+                    cD.innerHTML = d.map(item => '<div class="autocomplete-item" onclick="window.addJournal(\\''+item.master_id+'\\', \\''+item.Name.replace(/'/g, "\\\\'")+'\\', \\''+item.ISSN+'\\')"><strong>'+item.Name+'</strong></div>').join('');
+                    cD.style.display = 'block';
+                }
+            });
+        </script>`;
+    }
 
     const analyzed = journals.map((j, idx) => {
         const scores = j.ratings.map(r => r.rating);
@@ -242,7 +294,6 @@ export function renderCompareBody(journals) {
         const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
         const variance = scores.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / scores.length;
         const stdDev = Math.sqrt(variance);
-        // Ranking score: Heavy weight on latest rating, moderate on average, penalty for volatility
         const rankScore = (latest * 0.6) + (avg * 0.4) - (stdDev * 0.2);
         return { ...j, latest, avg, stdDev, rankScore, color: colors[idx] };
     }).sort((a, b) => b.rankScore - a.rankScore);
@@ -252,15 +303,15 @@ export function renderCompareBody(journals) {
     const rankMedals = { 0: '🥇', 1: '🥈', 2: '🥉', 3: '🏅' };
 
     return `
-    <div class="no-print" style="margin-bottom: 20px;"><a href="/" class="btn" style="background: #6c757d;">← Back</a></div>
+    <div class="no-print" style="margin-bottom: 20px;"><a href="/compare" class="btn" style="background: #6c757d;">← New Comparison</a></div>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
         ${analyzed.map((j, i) => `
             <div class="card" style="border-top: 4px solid ${j.color}; padding: 15px; margin: 0; position:relative;">
                 <div style="position:absolute; top:10px; right:10px; font-size:20px;">${rankMedals[i]}</div>
-                <div style="font-size: 10px; font-weight: bold; color: #999; text-transform:uppercase;">Rank ${i+1}</div>
+                <div style="font-size: 10px; font-weight: bold; color: #999;">RANK ${i+1}</div>
                 <h4 style="margin: 5px 0; font-size: 14px; height: 32px; overflow:hidden;">${j.name}</h4>
                 <div style="font-size: 22px; font-weight: bold; color: ${j.color};">${j.latest.toFixed(2)}</div>
-                <div style="font-size: 11px; color: #666;">Hist. Avg: ${j.avg.toFixed(2)} | &sigma;: ${j.stdDev.toFixed(2)}</div>
+                <div style="font-size: 11px; color: #666;">Avg: ${j.avg.toFixed(2)}</div>
             </div>
         `).join('')}
     </div>
@@ -283,6 +334,5 @@ export function renderCompareBody(journals) {
                 options: { responsive: true, maintainAspectRatio: false }
             });
         }, 150);
-    </script>
-    `;
+    </script>`;
 }
