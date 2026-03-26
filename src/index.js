@@ -57,7 +57,8 @@ export default {
       if (path === "/compare") {
         const ids = [
             url.searchParams.get("id1"), url.searchParams.get("id2"), 
-            url.searchParams.get("id3"), url.searchParams.get("id4")
+            url.searchParams.get("id3"), url.searchParams.get("id4"),
+            url.searchParams.get("id5") // Added 5th journal support
         ].filter(Boolean);
 
         let journals = [];
