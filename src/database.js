@@ -48,8 +48,13 @@ export async function getGlobalStats(db) {
   `).bind(latestYear).all();
 
   const unratedCount = await db.prepare(`
-    SELECT COUNT(DISTINCT m.master_id) as count FROM journal_master m
-    WHERE m.master_id NOT IN (SELECT v.master_id FROM naas_ratings r JOIN journal_variants v ON r.issn_clean = v.issn_clean WHERE r.year = ?)
+    SELECT COUNT(DISTINCT issn_clean) as count 
+    FROM naas_ratings 
+    WHERE issn_clean NOT IN (
+      SELECT issn_clean 
+      FROM naas_ratings 
+      WHERE year = ?
+    )
   `).bind(latestYear).first();
 
   const added = await db.prepare(`
