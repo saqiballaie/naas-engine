@@ -3,22 +3,35 @@ export async function getLatestYear(db) {
   return row ? row.yr : 2026;
 }
 
-export async function searchJournals(db, year, term, min, max) {
-  const cleanTerm = term.replace(/-/g, '').toUpperCase();
-  const query = `
-    SELECT m.main_display_name as Name, MAX(v.issn_original) as ISSN, m.master_id,
-      MAX(CASE WHEN r.year = ? THEN r.rating END) as latest_score,
-      AVG(r.rating) as calculated_avg, COUNT(r.rating) as valid_years
-    FROM journal_master m 
-    JOIN journal_variants v ON m.master_id = v.master_id
-    LEFT JOIN naas_ratings r ON v.issn_clean = r.issn_clean
-    WHERE (m.main_display_name LIKE ? OR v.issn_clean LIKE ?)
-    GROUP BY m.master_id
-    HAVING (? = '' OR latest_score >= CAST(? AS REAL)) AND (? = '' OR latest_score <= CAST(? AS REAL))
-    ORDER BY latest_score DESC, calculated_avg DESC LIMIT 150
-  `;
-  const res = await db.prepare(query).bind(year, `%${term}%`, `%${cleanTerm}%`, min, min, max, max).all();
-  return res.results || [];
+// Add 'page' to the parameters, default to 1
+export async function searchJournals(db, year, search, min, max, page = 1) {
+    const limit = 50; // Show 50 per page for better speed
+    const offset = (page - 1) * limit;
+
+    let whereClause = "";
+    let params = [year];
+
+    if (search) {
+        whereClause += " AND (m.main_display_name LIKE ? OR v.issn_clean LIKE ?)";
+        params.push(`%${search}%`, `%${search.replace(/-/g, '')}%`);
+    }
+    if (min) { whereClause += " AND r.rating >= ?"; params.push(parseFloat(min)); }
+    if (max) { whereClause += " AND r.rating <= ?"; params.push(parseFloat(max)); }
+
+    const query = `
+        SELECT m.main_display_name as name, MAX(v.issn_original) as issn, r.rating, m.master_id
+        FROM journal_master m
+        JOIN journal_variants v ON m.master_id = v.master_id
+        JOIN naas_ratings r ON v.issn_clean = r.issn_clean
+        WHERE r.year = ? ${whereClause}
+        GROUP BY m.master_id
+        ORDER BY m.main_display_name ASC
+        LIMIT ? OFFSET ?`; // Add LIMIT and OFFSET
+    
+    params.push(limit, offset);
+
+    const results = await db.prepare(query).bind(...params).all();
+    return results.results || [];
 }
 
 export async function getJournalMetrics(db, masterId) {
