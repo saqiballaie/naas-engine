@@ -22,19 +22,18 @@ export async function searchJournals(db, year, term, min, max) {
 }
 
 export async function getJournalMetrics(db, masterId) {
-  // 1. Get the current master name
+  // 1. Get current master name (Safe against nulls)
   const journal = await db.prepare("SELECT main_display_name FROM journal_master WHERE master_id = ?").bind(masterId).first();
-  const mainName = journal ? journal.main_display_name : "Unknown Journal";
+  const mainName = (journal && journal.main_display_name) ? String(journal.main_display_name) : "Unknown Journal";
 
-  // 2. Get ALL ISSN variants (Print, Online, etc.)
+  // 2. Get all ISSNs
   const variants = await db.prepare("SELECT issn_original FROM journal_variants WHERE master_id = ?").bind(masterId).all();
   const allIssns = (variants.results || []).map(v => v.issn_original).filter(Boolean);
   
-  // Separate the first ISSN as the primary, and the rest as alternatives
   const primaryIssn = allIssns.length > 0 ? allIssns[0] : "N/A";
   const altIssns = allIssns.slice(1);
 
-  // 3. Get the historical ratings and the names used in those specific years
+  // 3. Get historical ratings
   const ratings = await db.prepare(`
     SELECT r.year, r.rating, r.journal_name_that_year 
     FROM naas_ratings r JOIN journal_variants v ON r.issn_clean = v.issn_clean
@@ -43,13 +42,16 @@ export async function getJournalMetrics(db, masterId) {
   
   const ratingsData = ratings.results || [];
 
-  // 4. Extract unique historical names that differ from the current master name
+  // 4. Extract unique historical names (Hardened against nulls)
   const historicalNamesSet = new Set();
   ratingsData.forEach(r => {
-      if (r.journal_name_that_year && r.journal_name_that_year.trim() !== mainName.trim()) {
-          historicalNamesSet.add(r.journal_name_that_year);
+      // Safely convert to string before trimming to prevent crashes
+      const histName = r.journal_name_that_year ? String(r.journal_name_that_year) : "";
+      if (histName && histName.trim() !== mainName.trim()) {
+          historicalNamesSet.add(histName);
       }
   });
+  
   const altNames = Array.from(historicalNamesSet);
 
   return {
@@ -60,7 +62,6 @@ export async function getJournalMetrics(db, masterId) {
     ratings: ratingsData
   };
 }
-
 export async function getGlobalStats(db) {
   const latestYear = await getLatestYear(db);
   const prevYear = latestYear - 1;
