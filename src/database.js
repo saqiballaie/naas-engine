@@ -22,17 +22,42 @@ export async function searchJournals(db, year, term, min, max) {
 }
 
 export async function getJournalMetrics(db, masterId) {
+  // 1. Get the current master name
   const journal = await db.prepare("SELECT main_display_name FROM journal_master WHERE master_id = ?").bind(masterId).first();
-  const variant = await db.prepare("SELECT issn_original FROM journal_variants WHERE master_id = ? LIMIT 1").bind(masterId).first();
+  const mainName = journal ? journal.main_display_name : "Unknown Journal";
+
+  // 2. Get ALL ISSN variants (Print, Online, etc.)
+  const variants = await db.prepare("SELECT issn_original FROM journal_variants WHERE master_id = ?").bind(masterId).all();
+  const allIssns = (variants.results || []).map(v => v.issn_original).filter(Boolean);
+  
+  // Separate the first ISSN as the primary, and the rest as alternatives
+  const primaryIssn = allIssns.length > 0 ? allIssns[0] : "N/A";
+  const altIssns = allIssns.slice(1);
+
+  // 3. Get the historical ratings and the names used in those specific years
   const ratings = await db.prepare(`
     SELECT r.year, r.rating, r.journal_name_that_year 
     FROM naas_ratings r JOIN journal_variants v ON r.issn_clean = v.issn_clean
     WHERE v.master_id = ? ORDER BY r.year ASC
   `).bind(masterId).all();
+  
+  const ratingsData = ratings.results || [];
+
+  // 4. Extract unique historical names that differ from the current master name
+  const historicalNamesSet = new Set();
+  ratingsData.forEach(r => {
+      if (r.journal_name_that_year && r.journal_name_that_year.trim() !== mainName.trim()) {
+          historicalNamesSet.add(r.journal_name_that_year);
+      }
+  });
+  const altNames = Array.from(historicalNamesSet);
+
   return {
-    name: journal ? journal.main_display_name : "Unknown Journal",
-    issn: variant ? variant.issn_original : "N/A",
-    ratings: ratings.results || []
+    name: mainName,
+    issn: primaryIssn,
+    altIssns: altIssns,
+    altNames: altNames,
+    ratings: ratingsData
   };
 }
 
