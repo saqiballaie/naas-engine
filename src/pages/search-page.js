@@ -13,6 +13,35 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
     `;
 
     return `
+    ${!isSearchSubmitted ? `
+    <div class="card" style="background: linear-gradient(to right bottom, #ffffff, #f8fafc); border: 1px solid #e2e8f0; margin-bottom: 25px;">
+        <h2 style="color: var(--primary); margin-top: 0; font-size: 28px;">Welcome to NAAS Insights Engine</h2>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">This platform is designed to provide researchers and academicians with longitudinal performance metrics and analytical evaluations of scientific journals based on the <strong>National Academy of Agricultural Sciences (NAAS)</strong> rating system.</p>
+        
+        <h3 style="color: #334155; margin-top: 25px; margin-bottom: 10px; font-size: 18px;">How to use this tool:</h3>
+        <ul style="color: #475569; line-height: 1.7; font-size: 15px;">
+            <li><strong>Find Journals:</strong> Use the search bar below to look up specific journals by Title or ISSN.</li>
+            <li><strong>Analyze Trends:</strong> Click on <em>"📊 Metrics"</em> to view historical averages, volatility index, and year-over-year growth.</li>
+            <li><strong>Compare Options:</strong> Stack multiple journals against each other on a unified historical chart using the Compare tool.</li>
+            <li><strong>Ecosystem View:</strong> Check the Statistics tab to see global trends and top-performing journals.</li>
+        </ul>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 30px;">
+        <div class="card" style="margin:0; border-left: 4px solid #0284c7; padding: 15px; background: #f0f9ff;">
+            <h4 style="margin:0 0 5px 0; color:#0369a1; font-size:14px;">📋 Recruitment Verification</h4>
+            <p style="margin:0; font-size:12px; color:#64748b;">Instant validation of NAAS scores for recruitment panels.</p>
+        </div>
+        <div class="card" style="margin:0; border-left: 4px solid #16a34a; padding: 15px; background: #f0fdf4;">
+            <h4 style="margin:0 0 5px 0; color:#15803d; font-size:14px;">🛡️ Anti-Fraud Shield</h4>
+            <p style="margin:0; font-size:12px; color:#64748b;">ISSN verification to prevent predatory journal fraud.</p>
+        </div>
+        <div class="card" style="margin:0; border-left: 4px solid var(--accent); padding: 15px; background: #fffbeb;">
+            <h4 style="margin:0 0 5px 0; color:#b45309; font-size:14px;">📈 Longitudinal Analytics</h4>
+            <p style="margin:0; font-size:12px; color:#64748b;">Historical trajectory and volatility indexing for scientists.</p>
+        </div>
+    </div>` : ''}
+
     <div class="card" style="border-top: 5px solid var(--primary); margin-bottom: 25px;">
         <form action="/" method="GET" id="search-form" style="max-width: 900px; margin: 0 auto; text-align: left;">
             <div style="margin-bottom: 20px; position: relative;">
@@ -36,27 +65,6 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
             </div>
         </form>
     </div>
-
-    ${!isSearchSubmitted ? `
-    <div class="card" style="background: linear-gradient(to right bottom, #ffffff, #f8fafc); border: 1px solid #e2e8f0;">
-        <h2 style="color: var(--primary); margin-top: 0;">Welcome to NAAS Insights Engine</h2>
-        <p style="color: #475569; font-size: 15px; line-height: 1.6;">Institutional portal for longitudinal metrics and anti-fraud verification of agricultural journals.</p>
-    </div>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 30px;">
-        <div class="card" style="margin:0; border-left: 4px solid #0284c7; padding: 15px; background: #f0f9ff;">
-            <h4 style="margin:0 0 5px 0; color:#0369a1; font-size:14px;">📋 Recruitment Verification</h4>
-            <p style="margin:0; font-size:12px; color:#64748b;">Instant validation of NAAS scores for recruitment panels.</p>
-        </div>
-        <div class="card" style="margin:0; border-left: 4px solid #16a34a; padding: 15px; background: #f0fdf4;">
-            <h4 style="margin:0 0 5px 0; color:#15803d; font-size:14px;">🛡️ Anti-Fraud Shield</h4>
-            <p style="margin:0; font-size:12px; color:#64748b;">ISSN verification to prevent predatory journal fraud.</p>
-        </div>
-        <div class="card" style="margin:0; border-left: 4px solid var(--accent); padding: 15px; background: #fffbeb;">
-            <h4 style="margin:0 0 5px 0; color:#b45309; font-size:14px;">📈 Longitudinal Analytics</h4>
-            <p style="margin:0; font-size:12px; color:#64748b;">Historical trajectory and volatility indexing for scientists.</p>
-        </div>
-    </div>` : ''}
 
     ${isSearchSubmitted ? `
     <div class="card" style="padding: 0; overflow: hidden;">
@@ -110,7 +118,43 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
     </style>
 
     <script>
-      // ... (Keep existing script for autocomplete here) ...
+      const inp = document.getElementById('main-search');
+      const dd = document.getElementById('search-dropdown');
+      
+      if(inp && dd) {
+        inp.addEventListener('input', async () => {
+          const val = inp.value.trim();
+          if(val.length < 2) { dd.style.display = 'none'; return; }
+          try {
+            const res = await fetch('/?ajax_search=' + encodeURIComponent(val));
+            const data = await res.json();
+            if(data.length > 0) {
+              dd.innerHTML = data.map(item => {
+                 const rawName = item.Name || item.name || "Unknown";
+                 const cleanName = String(rawName).replace(/"/g, '&quot;');
+                 const id = item.master_id;
+                 const issn = item.ISSN || item.issn || 'N/A';
+                 return '<div class="autocomplete-item" data-id="' + id + '" data-name="' + cleanName + '">' +
+                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
+                        '<small style="color:#666;">ISSN: ' + issn + '</small></div>';
+              }).join('');
+              dd.style.display = 'block';
+            } else { dd.style.display = 'none'; }
+          } catch (err) { console.error("Autocomplete Error:", err); }
+        });
+
+        dd.addEventListener('click', (e) => {
+            const item = e.target.closest('.autocomplete-item');
+            if (item) {
+                const id = item.getAttribute('data-id');
+                window.location.href = '/journal?id=' + id;
+            }
+        });
+
+        document.addEventListener('click', (e) => { 
+            if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; 
+        });
+      }
     </script>
     `;
 }
