@@ -94,35 +94,95 @@ export function renderAnalyticsBody(data) {
   }
   
   const ratings = data.ratings;
-  const latest = ratings[ratings.length - 1];
-  const previous = ratings.length > 1 ? ratings[ratings.length - 2] : null;
-  const sum = ratings.reduce((acc, curr) => acc + curr.rating, 0);
-  const avgScore = sum / ratings.length;
-
-  // Formatting arrays for the Chart.js
-  const chartYears = JSON.stringify(ratings.map(r => r.year));
-  const chartValues = JSON.stringify(ratings.map(r => r.rating));
-  const avgValues = JSON.stringify(ratings.map(() => avgScore.toFixed(2))); // Straight line array
-
-  // Recommendation Engine Logic
-  let recStatus = "Recommended";
-  let recColor = "var(--success)";
-  let recReason = "The journal exhibits a stable or upward trajectory above its historical average.";
+  const n = ratings.length;
   
-  // If the latest rating is dropping significantly below the 10-year average, OR dropping consistently YoY
-  if (latest.rating < avgScore && previous && latest.rating < previous.rating) {
-      recStatus = "Not Recommended";
-      recColor = "var(--danger)";
-      recReason = "The journal's recent NAAS rating is declining and currently performing below its 10-year historical average.";
-  } else if (latest.rating < avgScore) {
-      recStatus = "Proceed with Caution";
-      recColor = "var(--accent)";
-      recReason = "The journal is currently rated below its 10-year average, though it has not shown a severe YoY decline.";
+  // Extract pure numbers for statistical math
+  const scores = ratings.map(r => r.rating);
+  const latestObj = ratings[n - 1];
+  const previousObj = n > 1 ? ratings[n - 2] : null;
+  const latestVal = latestObj.rating;
+  const previousVal = previousObj ? previousObj.rating : null;
+
+  // Calculate Mean (Average)
+  const sum = scores.reduce((a, b) => a + b, 0);
+  const avgScore = sum / n;
+
+  // Calculate Variance & Standard Deviation (Volatility)
+  const variance = scores.reduce((a, b) => a + Math.pow(b - avgScore, 2), 0) / n;
+  const stdDev = Math.sqrt(variance);
+
+  // Calculate 3-Year Moving Average vs Historical (Momentum)
+  let recentAvg = latestVal;
+  let historicalAvg = avgScore;
+  if (n >= 4) {
+      recentAvg = (scores[n-1] + scores[n-2] + scores[n-3]) / 3;
+      const histScores = scores.slice(0, n-3);
+      historicalAvg = histScores.reduce((a, b) => a + b, 0) / histScores.length;
+  } else if (n === 3) {
+      recentAvg = (scores[1] + scores[2]) / 2;
+      historicalAvg = scores[0];
   }
 
-  // Pre-calculate table rows (Reverse chronological for the table UI)
+  // --- STATISTICAL RECOMMENDATION ENGINE ---
+  let recStatus = "Recommended";
+  let recColor = "var(--success)";
+  let recReason = "";
+
+  if (n < 3) {
+      if (latestVal >= avgScore) {
+          recStatus = "Recommended";
+          recReason = "Based on limited available data, the journal is maintaining its rating baseline.";
+      } else {
+          recStatus = "Proceed with Caution";
+          recColor = "var(--accent)";
+          recReason = "Limited historical data shows a recent dip in the rating.";
+      }
+  } else {
+      const isSevereCrash = previousVal !== null && (previousVal - latestVal) > stdDev && stdDev > 0.3;
+      const isSevereSpike = previousVal !== null && (latestVal - previousVal) > stdDev && stdDev > 0.3;
+
+      if (recentAvg >= avgScore && latestVal >= avgScore && !isSevereCrash) {
+          recStatus = "Recommended";
+          recColor = "var(--success)";
+          recReason = `The journal demonstrates strong, sustained performance. Its recent 3-year momentum (${recentAvg.toFixed(2)}) meets or exceeds its 10-year historical baseline, indicating a reliable publishing venue.`;
+      } else if (isSevereSpike && historicalAvg < avgScore) {
+          recStatus = "Proceed with Caution";
+          recColor = "var(--accent)";
+          recReason = `Statistical anomaly detected: While the current rating spiked significantly this year, the older historical average (${historicalAvg.toFixed(2)}) is much lower. Verify if this recent quality improvement is sustainable before publishing.`;
+      } else if (isSevereCrash || (recentAvg < historicalAvg && latestVal < avgScore)) {
+          if (historicalAvg > avgScore + 0.2) {
+              recStatus = "Proceed with Caution";
+              recColor = "var(--accent)";
+              recReason = `This journal was historically strong (averaging ${historicalAvg.toFixed(2)}), but statistical variance analysis reveals a severe recent decline. Exercise caution until ratings stabilize.`;
+          } else {
+              recStatus = "Not Recommended";
+              recColor = "var(--danger)";
+              recReason = `The journal shows a sustained downward trajectory. Its recent ratings have crashed below the historical average (${avgScore.toFixed(2)}) and standard deviation thresholds, indicating declining scientific impact.`;
+          }
+      } else if (recentAvg < avgScore) {
+          recStatus = "Not Recommended";
+          recColor = "var(--danger)";
+          recReason = `Statistical trends indicate a persistent underperformance, with the recent moving average (${recentAvg.toFixed(2)}) remaining below the historical baseline.`;
+      } else {
+          recStatus = "Proceed with Caution";
+          recColor = "var(--accent)";
+          recReason = "The journal's performance is highly volatile and shows inconsistent statistical trends compared to its historical mean.";
+      }
+  }
+
+  // Top Deviation Card
+  const topDeviation = latestVal - avgScore;
+  const topDevColor = topDeviation >= 0 ? "var(--success)" : "var(--danger)";
+  const topDevSign = topDeviation >= 0 ? "+" : "";
+
+  // Formats for Chart.js
+  const chartYears = JSON.stringify(ratings.map(r => r.year));
+  const chartValues = JSON.stringify(ratings.map(r => r.rating));
+  const avgValues = JSON.stringify(ratings.map(() => avgScore.toFixed(2))); 
+
+  // Table Row Generation (Reverse Chronological)
   let tableRowsHtml = "";
-  for (let i = ratings.length - 1; i >= 0; i--) {
+  for (let i = n - 1; i >= 0; i--) {
       const current = ratings[i];
       const prev = i > 0 ? ratings[i - 1] : null;
       
@@ -145,7 +205,6 @@ export function renderAnalyticsBody(data) {
   return `
     <div class="card">
         <h2 style="color: var(--primary); margin: 0;">${data.name}</h2>
-        
         <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
             <div style="background: #f1f3f4; padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; color: #555;">
                 ISSN: <b>${data.issn}</b>
@@ -157,13 +216,17 @@ export function renderAnalyticsBody(data) {
     </div>
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">
-        <div class="card" style="text-align: center; border-left: 5px solid var(--success); margin: 0;">
-            <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">10-Year Average</small>
-            <div style="font-size: 32px; font-weight: bold; color: var(--success);">${avgScore.toFixed(2)}</div>
+        <div class="card" style="text-align: center; border-left: 5px solid #6c757d; margin: 0;">
+            <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Historical Average</small>
+            <div style="font-size: 32px; font-weight: bold; color: #6c757d;">${avgScore.toFixed(2)}</div>
         </div>
         <div class="card" style="text-align: center; border-left: 5px solid var(--primary); margin: 0;">
-            <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Latest Rating (${latest.year})</small>
-            <div style="font-size: 32px; font-weight: bold; color: var(--primary);">${latest.rating.toFixed(2)}</div>
+            <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Latest Rating (${latestObj.year})</small>
+            <div style="font-size: 32px; font-weight: bold; color: var(--primary);">${latestVal.toFixed(2)}</div>
+        </div>
+        <div class="card" style="text-align: center; border-left: 5px solid ${topDevColor}; margin: 0;">
+            <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Deviation from Average</small>
+            <div style="font-size: 32px; font-weight: bold; color: ${topDevColor};">${topDevSign}${topDeviation.toFixed(2)}</div>
         </div>
     </div>
 
@@ -191,7 +254,7 @@ export function renderAnalyticsBody(data) {
                 </tbody>
                 <tfoot>
                     <tr style="background: #eef2f5;">
-                        <td style="padding: 12px; text-align: right; font-weight: bold; color: #555;">10-Year Average:</td>
+                        <td style="padding: 12px; text-align: right; font-weight: bold; color: #555;">Historical Average:</td>
                         <td style="padding: 12px; text-align: center; font-weight: bold; color: var(--primary); font-size: 16px;">${avgScore.toFixed(2)}</td>
                         <td colspan="2"></td>
                     </tr>
@@ -203,10 +266,12 @@ export function renderAnalyticsBody(data) {
     <div class="card" style="border-left: 5px solid ${recColor}; background: #fffcfc;">
         <h3 style="margin-top: 0; color: #333; font-size: 16px;">Algorithmic Recommendation</h3>
         <p style="font-size: 15px; line-height: 1.6; color: #555;">
-            On the basis of the NAAS rating analysis of the last 10 years and the current NAAS trajectory, it is 
-            <strong style="color: ${recColor}; font-size: 16px;">${recStatus}</strong> to publish in this journal.
+            On the basis of the NAAS rating analysis of the last 10 years and current NAAS trajectory, it is 
+            <strong style="color: ${recColor}; font-size: 16px; text-transform: uppercase;">${recStatus}</strong> to publish in this journal.
         </p>
-        <p style="font-size: 13px; color: #888; margin-bottom: 0;"><em>Reasoning: ${recReason}</em></p>
+        <p style="font-size: 13px; color: #888; margin-bottom: 0; border-top: 1px dashed #ddd; padding-top: 10px;">
+            <strong>Reasoning:</strong> ${recReason}
+        </p>
     </div>
 
     <script>
@@ -227,7 +292,7 @@ export function renderAnalyticsBody(data) {
                             order: 1
                         },
                         {
-                            label: '10-Year Average (${avgScore.toFixed(2)})',
+                            label: 'Historical Average (${avgScore.toFixed(2)})',
                             data: ${avgValues},
                             borderColor: '#28a745',
                             borderWidth: 2,
@@ -242,9 +307,7 @@ export function renderAnalyticsBody(data) {
                     responsive: true, 
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        tooltip: { enabled: true }
-                    }
+                    plugins: { tooltip: { enabled: true } }
                 }
             });
         }, 150);
