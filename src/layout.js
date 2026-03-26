@@ -18,7 +18,8 @@ export function layout(title, content, path, latestYear) {
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: #333; display: flex; flex-direction: column; min-height: 100vh; }
         header { background: var(--white); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .header-container { max-width: 1200px; margin: 0 auto; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .logo h1 { margin: 0; color: var(--primary); font-size: 22px; font-weight: 800; }
+        .logo h1 { margin: 0; color: var(--primary); font-size: 22px; font-weight: 800; line-height: 1.2; }
+        .initiative-subtitle { font-size: 11px; color: #6c757d; margin-top: 3px; font-weight: 500; letter-spacing: 0.3px; max-width: 550px; }
         nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
         nav a { color: #495057; text-decoration: none; font-weight: 600; font-size: 14px; padding: 8px 14px; border-radius: 6px; }
         nav a:hover, nav a.${isSearchActive}, nav a.${isCompareActive} { color: var(--white); background: var(--primary); }
@@ -29,13 +30,18 @@ export function layout(title, content, path, latestYear) {
         .autocomplete-dropdown { position: absolute; background: white; border: 1px solid #ddd; width: 100%; z-index: 2000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 0 0 8px 8px; max-height: 300px; overflow-y: auto; }
         .autocomplete-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; text-align: left; }
         .autocomplete-item:hover { background: var(--primary-light); }
-        @media (max-width: 768px) { .header-container { flex-direction: column; } nav ul { margin-top: 10px; } }
+        @media (max-width: 768px) { .header-container { flex-direction: column; text-align: center; } .initiative-subtitle { text-align: center; margin: 8px auto; } nav ul { margin-top: 10px; justify-content: center; } }
     </style>
 </head>
 <body>
 <header>
     <div class="header-container">
-        <div class="logo"><h1>NAAS Insights Engine</h1></div>
+        <div class="logo">
+            <h1>NAAS Insights Engine</h1>
+            <div class="initiative-subtitle">
+                A joint initiative by Sardar Vallabhbhai Patel University of Agriculture and Technology & Sher-e-Kashmir University of Agricultural Sciences and Technology of Kashmir
+            </div>
+        </div>
         <nav>
             <ul>
                 <li><a href="/" class="${isSearchActive}">Search</a></li>
