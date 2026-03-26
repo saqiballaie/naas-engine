@@ -1,25 +1,20 @@
+import { escapeHTML } from '../utils.js';
+
 export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitted) {
+    const safeTerm = escapeHTML(searchTerm);
     return `
     <div class="card" style="border-top: 5px solid var(--primary);">
         <form action="/" method="GET" id="search-form" style="max-width: 900px; margin: 0 auto; text-align: left;">
             <div style="margin-bottom: 20px; position: relative;">
                 <label style="font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 8px; display: block;">Find a Journal</label>
-                <input type="text" id="main-search" name="search" autocomplete="off" value="${searchTerm}" placeholder="Enter Journal Name or ISSN..." style="width: 100%; padding: 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 16px; transition: border-color 0.2s;">
+                <input type="text" id="main-search" name="search" autocomplete="off" value="${safeTerm}" placeholder="Enter Journal Name or ISSN..." style="width: 100%; padding: 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 16px;">
                 <div class="autocomplete-dropdown" id="search-dropdown"></div>
             </div>
-            
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end;">
-                <div>
-                    <label style="font-size: 11px; font-weight: bold; color: #64748b;">Min Rating</label>
-                    <input type="number" step="0.01" name="min_rating" value="${min}" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px;">
-                </div>
-                <div>
-                    <label style="font-size: 11px; font-weight: bold; color: #64748b;">Max Rating</label>
-                    <input type="number" step="0.01" name="max_rating" value="${max}" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px;">
-                </div>
+                <div><label style="font-size: 11px; font-weight: bold; color: #64748b;">Min Rating</label><input type="number" step="0.01" name="min_rating" value="${escapeHTML(min)}" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px;"></div>
+                <div><label style="font-size: 11px; font-weight: bold; color: #64748b;">Max Rating</label><input type="number" step="0.01" name="max_rating" value="${escapeHTML(max)}" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px;"></div>
                 <button type="submit" class="btn" style="height: 45px; font-size: 15px;">Search Database</button>
             </div>
-
             <div style="margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
                 <span style="font-size: 12px; font-weight: bold; color: #64748b; margin-right: 15px; text-transform: uppercase;">Quick Categories:</span>
                 <div style="display: inline-flex; gap: 10px; flex-wrap: wrap; align-items: center;">
@@ -31,12 +26,8 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
             </div>
         </form>
     </div>
-
     <style>
-        .quick-chip { 
-            padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; text-decoration: none; 
-            transition: all 0.2s ease; border: 1px solid transparent; 
-        }
+        .quick-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s ease; border: 1px solid transparent; }
         .quick-chip.developing { color: #475569; background: #f1f5f9; border-color: #cbd5e1; }
         .quick-chip.mid { color: #b45309; background: #fef3c7; border-color: #fde68a; }
         .quick-chip.high { color: #15803d; background: #dcfce3; border-color: #bbf7d0; }
@@ -47,19 +38,15 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
     ${!isSearchSubmitted ? `
     <div class="card" style="background: linear-gradient(to right bottom, #ffffff, #f8fafc); border: 1px solid #e2e8f0;">
         <h2 style="color: var(--primary); margin-top: 0;">Welcome to NAAS Insights Engine</h2>
-        <p style="color: #475569; font-size: 15px; line-height: 1.6;">
-            This platform is designed to provide researchers and academicians with longitudinal performance metrics and analytical evaluations of scientific journals based on the <strong>National Academy of Agricultural Sciences (NAAS)</strong> rating system.
-        </p>
-        
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">This platform is designed to provide researchers and academicians with longitudinal performance metrics and analytical evaluations of scientific journals based on the <strong>National Academy of Agricultural Sciences (NAAS)</strong> rating system.</p>
         <h3 style="color: #334155; margin-top: 25px; margin-bottom: 10px; font-size: 18px;">How to use this tool:</h3>
         <ul style="color: #475569; line-height: 1.7; font-size: 15px;">
-            <li><strong>Find Journals:</strong> Use the search bar above to look up specific journals by their Title or ISSN.</li>
-            <li><strong>Analyze Trends:</strong> Click on <em>"📊 Metrics"</em> next to any search result to view that journal's historical averages, volatility index, and year-over-year growth.</li>
-            <li><strong>Compare Options:</strong> Head over to the <a href="/compare" style="color: var(--primary); font-weight: 600; text-decoration: none;">Compare tab</a> to stack up to four journals against each other on a unified historical chart.</li>
-            <li><strong>Ecosystem View:</strong> Check the <a href="/statistics" style="color: var(--primary); font-weight: 600; text-decoration: none;">Statistics tab</a> to see global trends and the current top-performing journals across all categories.</li>
+            <li><strong>Find Journals:</strong> Use the search bar above to look up specific journals by Title or ISSN.</li>
+            <li><strong>Analyze Trends:</strong> Click on <em>"📊 Metrics"</em> to view historical averages, volatility index, and year-over-year growth.</li>
+            <li><strong>Compare Options:</strong> Stack up to 5 journals against each other on a unified historical chart.</li>
+            <li><strong>Ecosystem View:</strong> Check the Statistics tab to see global trends and top-performing journals.</li>
         </ul>
-    </div>
-    ` : ''}
+    </div>` : ''}
 
     ${isSearchSubmitted ? `
     <div class="card" style="padding: 0; overflow: hidden;">
@@ -67,50 +54,23 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
             <h3 style="margin: 0; font-size: 16px; color: #334155;">Search Results (${results.length})</h3>
             ${results.length === 150 ? `<span style="font-size: 12px; color: #ef4444; font-weight: bold;">Showing top 150 limit. Please refine search.</span>` : ''}
         </div>
-        
         ${results.length === 0 ? `
-            <div style="padding: 40px; text-align: center; color: #64748b;">
-                <div style="font-size: 40px; margin-bottom: 10px;">🔍</div>
-                <h3>No journals found</h3>
-                <p>Try adjusting your search terms or clearing the minimum/maximum rating filters.</p>
-                <a href="/" class="btn" style="margin-top: 10px;">Clear Filters</a>
-            </div>
+            <div style="padding: 40px; text-align: center; color: #64748b;"><div style="font-size: 40px; margin-bottom: 10px;">🔍</div><h3>No journals found</h3><a href="/" class="btn" style="margin-top: 10px;">Clear Filters</a></div>
         ` : `
         <div class="table-responsive" style="border: none; border-radius: 0;">
             <table>
-                <thead>
-                    <tr style="background: #ffffff;">
-                        <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">ISSN</th>
-                        <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Journal Title</th>
-                        <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Latest Rating</th>
-                        <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Hist. Avg</th>
-                        <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Trend</th>
-                        <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Action</th>
-                    </tr>
-                </thead>
+                <thead><tr style="background: #ffffff;"><th style="color:#64748b; font-size:12px; text-transform:uppercase;">ISSN</th><th style="color:#64748b; font-size:12px; text-transform:uppercase;">Journal Title</th><th style="color:#64748b; font-size:12px; text-transform:uppercase;">Latest Rating</th><th style="color:#64748b; font-size:12px; text-transform:uppercase;">Hist. Avg</th><th style="color:#64748b; font-size:12px; text-transform:uppercase;">Trend</th><th style="color:#64748b; font-size:12px; text-transform:uppercase;">Action</th></tr></thead>
                 <tbody>
                     ${results.map(row => {
-                        const trendStr = (row.latest_score - row.calculated_avg) >= 0 
-                            ? '<span style="color: #15803d; font-weight: bold;">↑ Up</span>' 
-                            : '<span style="color: #b45309; font-weight: bold;">↓ Down</span>';
-                        return `
-                        <tr>
-                            <td style="font-family: monospace; color: #475569;">${row.ISSN || 'N/A'}</td>
-                            <td><strong style="color: #1e293b;">${row.Name}</strong></td>
-                            <td><span style="font-weight: 800; color: var(--primary);">${row.latest_score ? row.latest_score.toFixed(2) : 'N/A'}</span></td>
-                            <td style="color: #64748b;">${row.calculated_avg ? row.calculated_avg.toFixed(2) : 'N/A'}</td>
-                            <td>${trendStr}</td>
-                            <td><a href="/journal?id=${row.master_id}" class="btn" style="padding: 6px 12px; font-size: 11px; background: #e2e8f0; color: #334155;">📊 Metrics</a></td>
-                        </tr>`;
+                        const trendStr = (row.latest_score - row.calculated_avg) >= 0 ? '<span style="color:#15803d; font-weight:bold;">↑ Up</span>' : '<span style="color:#b45309; font-weight:bold;">↓ Down</span>';
+                        return `<tr><td style="font-family:monospace; color:#475569;">${row.ISSN || 'N/A'}</td><td><strong style="color:#1e293b;">${row.Name}</strong></td><td><span style="font-weight:800; color:var(--primary);">${row.latest_score ? row.latest_score.toFixed(2) : 'N/A'}</span></td><td style="color:#64748b;">${row.calculated_avg ? row.calculated_avg.toFixed(2) : 'N/A'}</td><td>${trendStr}</td><td><a href="/journal?id=${row.master_id}" class="btn" style="padding:6px 12px; font-size:11px; background:#e2e8f0; color:#334155;">📊 Metrics</a></td></tr>`;
                     }).join('')}
                 </tbody>
             </table>
-        </div>
-        `}
+        </div>`}
     </div>` : ''}
 
     <script>
-      // Keep existing autocomplete JS here...
       const inp = document.getElementById('main-search');
       const dd = document.getElementById('search-dropdown');
       if(inp) {
@@ -123,5 +83,18 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
             if(data.length > 0) {
               dd.innerHTML = data.map(item => {
                  const safeName = item.Name.replace(/'/g, "\\\\'");
-                 return \`<div class="autocomplete-item" onclick="window.selectJournal('\${safeName}')"><span style="display:block; font-weight:bold; color:var(--primary);">\${item.Name}</span><small style="color:#666;">ISSN: \${item.ISSN}</small></div>\`;
+                 // Fixed string concatenation instead of nested backticks
+                 return '<div class="autocomplete-item" onclick="window.selectJournal(\\'' + safeName + '\\')">' +
+                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + item.Name + '</span>' +
+                        '<small style="color:#666;">ISSN: ' + item.ISSN + '</small></div>';
               }).join('');
+              dd.style.display = 'block';
+            } else { dd.style.display = 'none'; }
+          } catch (err) { console.error(err); }
+        });
+        window.selectJournal = function(val) { inp.value = val; dd.style.display = 'none'; document.getElementById('search-form').submit(); };
+        document.addEventListener('click', (e) => { if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; });
+      }
+    </script>
+    `;
+}
