@@ -85,7 +85,27 @@ export function renderAnalyticsPage(data) {
     }
 
     // Calculate Percentile for the bottom card
-    const percentile = data.total_journals ? ((data.rank / data.total_journals) * 100).toFixed(1) : 0;
+    // Calculate Percentile and format the text properly
+    const rawPercentile = data.total_journals ? (data.rank / data.total_journals) * 100 : 0;
+    let rankText = "";
+    let rankColor = "";
+
+    if (rawPercentile <= 10) {
+        rankText = `Top ${rawPercentile.toFixed(1)}% (Elite Tier)`;
+        rankColor = "#15803d"; // Dark Green
+    } else if (rawPercentile <= 25) {
+        rankText = `Top ${rawPercentile.toFixed(1)}% (Excellent)`;
+        rankColor = "#16a34a"; // Green
+    } else if (rawPercentile <= 50) {
+        rankText = `Top ${rawPercentile.toFixed(1)}% (Above Average)`;
+        rankColor = "#0284c7"; // Blue
+    } else if (rawPercentile <= 75) {
+        rankText = `Bottom ${(100 - rawPercentile).toFixed(1)}% (Below Average)`;
+        rankColor = "#ea580c"; // Orange
+    } else {
+        rankText = `Bottom ${(100 - rawPercentile).toFixed(1)}% (Low Tier)`;
+        rankColor = "#dc2626"; // Red
+    }
 
     return `
     <div style="max-width: 900px; margin: 0 auto;">
@@ -185,8 +205,8 @@ export function renderAnalyticsPage(data) {
             </div>
             <div style="text-align: right; background: #f8fafc; padding: 15px 25px; border-radius: 8px; border: 1px solid #f1f5f9;">
                 <div style="font-size: 28px; font-weight: 900; color: var(--primary);">Rank #${data.rank || '?'}</div>
-                <div style="font-size: 14px; font-weight: bold; color: ${percentile <= 20 ? '#16a34a' : '#64748b'};">
-                    Top ${percentile}% of ${data.total_journals || '?'} Journals
+                <div style="font-size: 14px; font-weight: bold; color: ${rankColor};">
+                    ${rankText} of ${data.total_journals || '?'} Journals
                 </div>
             </div>
         </div>
