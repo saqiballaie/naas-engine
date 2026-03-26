@@ -6,6 +6,8 @@ export function renderAnalyticsPage(data) {
     // 1. Prepare Chart Data (Chronological: 2015 -> Current)
     const chartLabels = JSON.stringify(data.history.map(row => row.year));
     const chartData = JSON.stringify(data.history.map(row => row.rating));
+    // NEW: Create an array of the average rating to plot a straight horizontal line
+    const chartAvgData = JSON.stringify(data.history.map(() => data.avg_rating));
 
     // 2. Prepare Table Data (Calculate Yearly Change and Deviation before reversing)
     const enrichedHistory = data.history.map((row, index, arr) => {
@@ -53,14 +55,14 @@ export function renderAnalyticsPage(data) {
             
             <div style="display: flex; gap: 20px; font-size: 14px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 15px;">
                 <span><strong>Latest Rating:</strong> <span style="color: var(--primary); font-weight: bold;">${data.latest_rating.toFixed(2)}</span></span>
-                <span><strong>10Y Average:</strong> ${data.avg_rating.toFixed(2)}</span>
+                <span><strong>Historical Average:</strong> ${data.avg_rating.toFixed(2)}</span>
                 <span><strong>Volatility (CV):</strong> ${data.cv.toFixed(2)}%</span>
             </div>
         </div>
 
         <div class="card" style="margin-bottom: 20px; padding: 20px;">
-            <h3 style="margin: 0 0 15px 0; color: #334155; font-size: 16px; text-transform: uppercase;">Historical Trend</h3>
-            <div style="position: relative; height: 280px; width: 100%;">
+            <h3 style="margin: 0 0 15px 0; color: #334155; font-size: 16px; text-transform: uppercase;">Historical Trend vs Average</h3>
+            <div style="position: relative; height: 300px; width: 100%;">
                 <canvas id="ratingChart"></canvas>
             </div>
         </div>
@@ -69,14 +71,14 @@ export function renderAnalyticsPage(data) {
             <div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                 <h3 style="margin: 0; font-size: 16px; color: #334155;">Annual Performance Record</h3>
             </div>
-            <div class="table-responsive" style="margin: 0; border: none; max-height: 400px; overflow-y: auto;">
+            <div class="table-responsive" style="margin: 0; border: none;">
                 <table style="margin: 0; width: 100%; text-align: center;">
-                    <thead style="position: sticky; top: 0; background: #ffffff; z-index: 1;">
+                    <thead style="background: #ffffff; border-bottom: 2px solid #e2e8f0;">
                         <tr>
-                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Year</th>
-                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Rating</th>
-                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Yearly Change</th>
-                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Dev. from Avg</th>
+                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase; padding: 12px;">Year</th>
+                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase; padding: 12px;">Rating</th>
+                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase; padding: 12px;">Yearly Change</th>
+                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase; padding: 12px;">Dev. from Avg</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -95,10 +97,10 @@ export function renderAnalyticsPage(data) {
 
                             return `
                             <tr>
-                                <td style="font-weight: bold; color: #475569;">${row.year}</td>
-                                <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 12px; font-weight: 800; color: var(--primary);">${row.rating.toFixed(2)}</span></td>
-                                <td>${changeUI}</td>
-                                <td>${devUI}</td>
+                                <td style="font-weight: bold; color: #475569; padding: 12px;">${row.year}</td>
+                                <td style="padding: 12px;"><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 12px; font-weight: 800; color: var(--primary);">${row.rating.toFixed(2)}</span></td>
+                                <td style="padding: 12px;">${changeUI}</td>
+                                <td style="padding: 12px;">${devUI}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
@@ -125,29 +127,59 @@ export function renderAnalyticsPage(data) {
             const ctx = canvas.getContext('2d');
             const labels = ${chartLabels};
             const chartData = ${chartData};
+            const avgData = ${chartAvgData};
 
             new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: 'NAAS Rating',
-                        data: chartData,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                        borderWidth: 3,
-                        pointBackgroundColor: '#ffffff',
-                        pointBorderColor: '#2563eb',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        fill: true,
-                        tension: 0.2
-                    }]
+                    datasets: [
+                        {
+                            label: 'NAAS Rating',
+                            data: chartData,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#2563eb',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            fill: true,
+                            tension: 0.2,
+                            order: 1 // Ensure this draws on top
+                        },
+                        {
+                            label: 'Historical Average',
+                            data: avgData,
+                            borderColor: '#94a3b8', // Slate gray for the average line
+                            borderWidth: 2,
+                            borderDash: [5, 5], // Dashed line effect
+                            pointRadius: 0, // Remove dots from the average line
+                            fill: false,
+                            tension: 0,
+                            order: 2
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { 
+                        legend: { 
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            padding: 12,
+                            titleFont: { size: 14 },
+                            bodyFont: { size: 14 }
+                        }
+                    },
                     scales: {
                         y: { 
                             beginAtZero: false,
