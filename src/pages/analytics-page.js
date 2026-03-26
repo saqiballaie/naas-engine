@@ -1,92 +1,119 @@
 export function renderAnalyticsPage(data) {
-    // 1. Safely handle cases where a journal might have no history yet
     if (!data || !data.history || data.history.length === 0) {
-        return `
-        <div class="card" style="text-align: center; padding: 50px; max-width: 800px; margin: 0 auto; border-top: 5px solid #dc2626;">
-            <h2 style="font-size: 40px; margin: 0;">⚠️</h2>
-            <h2 style="color: #dc2626;">No Historical Data Found</h2>
-            <p style="color: #64748b;">There are no NAAS ratings recorded for <strong>${data.name || 'this journal'}</strong> in our database.</p>
-            <a href="/" class="btn" style="margin-top: 20px;">Return to Search</a>
-        </div>`;
+        return `<div class="card" style="text-align: center; padding: 50px;"><h2>No Data Found</h2><a href="/" class="btn">Return to Search</a></div>`;
     }
 
-    // 2. Prepare data for the Chart (Chronological Order: 2015 -> Current)
+    // 1. Prepare Chart Data (Chronological: 2015 -> Current)
     const chartLabels = JSON.stringify(data.history.map(row => row.year));
     const chartData = JSON.stringify(data.history.map(row => row.rating));
 
+    // 2. Prepare Table Data (Calculate Yearly Change and Deviation before reversing)
+    const enrichedHistory = data.history.map((row, index, arr) => {
+        let yearlyChange = null;
+        if (index > 0) {
+            yearlyChange = row.rating - arr[index - 1].rating;
+        }
+        const devFromAvg = row.rating - data.avg_rating;
+        return { ...row, yearlyChange, devFromAvg };
+    });
+
+    // 3. Prepare Recommendation Logic based on Volatility (CV)
+    let recTitle = "Highly Recommended";
+    let recText = "This journal shows stable historical ratings, making it a reliable choice for consistent CAS/API score accumulation.";
+    let recColor = "#16a34a"; // Green
+    let recIcon = "✅";
+
+    if (data.cv > 15) {
+        recTitle = "Caution Advised";
+        recText = "This journal exhibits high rating volatility. There is a significant risk of sudden score drops in future NAAS assessments.";
+        recColor = "#dc2626"; // Red
+        recIcon = "⚠️";
+    } else if (data.cv > 8) {
+        recTitle = "Moderate Fluctuation";
+        recText = "This journal has noticeable rating fluctuations. Monitor its trajectory closely before submitting critical manuscripts.";
+        recColor = "#b45309"; // Orange
+        recIcon = "⚖️";
+    }
+
     return `
-    <div style="max-width: 1000px; margin: 0 auto;">
+    <div style="max-width: 900px; margin: 0 auto;">
         
-        <div class="card" style="border-top: 5px solid var(--primary); margin-bottom: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
-                <div>
-                    <h2 style="margin: 0 0 10px 0; color: #0f172a; font-size: 24px;">${data.name}</h2>
-                    <div style="display: flex; gap: 15px; align-items: center; font-family: monospace; color: #475569; font-size: 14px;">
-                        <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px;"><strong>ISSN:</strong> ${data.issn}</span>
-                        <span style="color: #cbd5e1;">|</span>
-                        <span><strong>Database ID:</strong> ${data.master_id}</span>
-                    </div>
+        <div class="card" style="border-top: 5px solid var(--primary); margin-bottom: 20px; padding: 25px;">
+            <h2 style="margin: 0 0 15px 0; color: #0f172a; font-size: 26px;">${data.name}</h2>
+            
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <div style="font-family: monospace; font-size: 15px; color: #334155; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <strong>ISSN:</strong> ${data.issn}
                 </div>
                 
-                <a href="https://www.google.com/search?q=ISSN+${data.issn}+Journal" target="_blank" rel="noopener noreferrer" class="btn" style="background: #0284c7; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.2);">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
-                    Verify via ISSN (Google)
-                </a>
+                <a href="/" class="btn" style="background: #475569; padding: 6px 12px; font-size: 13px;">🔍 New Search</a>
+                <a href="/compare?id1=${data.master_id}" class="btn" style="background: #8b5cf6; padding: 6px 12px; font-size: 13px;">📈 Compare</a>
+                <a href="https://www.google.com/search?q=ISSN+${data.issn}+Journal" target="_blank" class="btn" style="background: #0284c7; padding: 6px 12px; font-size: 13px;">🛡️ Verify via Google</a>
             </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">
-            <div class="card" style="margin: 0; text-align: center; padding: 20px;">
-                <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">Latest NAAS Rating</h4>
-                <div style="font-size: 36px; font-weight: 900; color: var(--primary);">${data.latest_rating ? data.latest_rating.toFixed(2) : 'N/A'}</div>
-            </div>
-            <div class="card" style="margin: 0; text-align: center; padding: 20px;">
-                <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">Historical Average</h4>
-                <div style="font-size: 32px; font-weight: 700; color: #334155;">${data.avg_rating ? data.avg_rating.toFixed(2) : 'N/A'}</div>
-            </div>
-            <div class="card" style="margin: 0; text-align: center; padding: 20px; border-bottom: 4px solid ${data.volatility_color};">
-                <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">Volatility Index</h4>
-                <div style="font-size: 20px; font-weight: 800; color: ${data.volatility_color}; margin-bottom: 5px;">${data.volatility_status}</div>
-                <div style="font-size: 12px; color: #94a3b8;">CV: ${data.cv ? data.cv.toFixed(2) + '%' : 'N/A'}</div>
-            </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
             
-            <div class="card" style="margin: 0; grid-column: span 2;">
-                <h3 style="margin-top: 0; color: #334155;">Longitudinal Trend (All Available Years)</h3>
-                <div style="position: relative; height: 300px; width: 100%;">
-                    <canvas id="ratingChart"></canvas>
-                </div>
+            <div style="display: flex; gap: 20px; font-size: 14px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 15px;">
+                <span><strong>Latest Rating:</strong> <span style="color: var(--primary); font-weight: bold;">${data.latest_rating.toFixed(2)}</span></span>
+                <span><strong>10Y Average:</strong> ${data.avg_rating.toFixed(2)}</span>
+                <span><strong>Volatility (CV):</strong> ${data.cv.toFixed(2)}%</span>
             </div>
+        </div>
 
-            <div class="card" style="margin: 0; padding: 0; overflow: hidden; grid-column: span 1;">
-                <h3 style="margin: 20px; color: #334155;">Data Record</h3>
-                <div class="table-responsive" style="margin: 0; border: none; max-height: 300px; overflow-y: auto;">
-                    <table style="margin: 0;">
-                        <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
-                            <tr>
-                                <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Year</th>
-                                <th style="text-align: right; color: #64748b; font-size: 12px; text-transform: uppercase;">Rating</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${[...data.history].reverse().map(row => `
-                                <tr>
-                                    <td style="font-weight: 600; color: #475569;">${row.year}</td>
-                                    <td style="text-align: right; font-weight: 800; color: var(--primary);">${row.rating.toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
+        <div class="card" style="margin-bottom: 20px; padding: 20px;">
+            <h3 style="margin: 0 0 15px 0; color: #334155; font-size: 16px; text-transform: uppercase;">Historical Trend</h3>
+            <div style="position: relative; height: 280px; width: 100%;">
+                <canvas id="ratingChart"></canvas>
             </div>
         </div>
-        
-        <div style="margin-top: 30px; text-align: center; padding-bottom: 40px;">
-            <a href="/" class="btn" style="background: #64748b; padding: 12px 24px;">← Back to Search</a>
-            <a href="/compare?id1=${data.master_id}" class="btn" style="margin-left: 15px; padding: 12px 24px;">Compare Journal 📈</a>
+
+        <div class="card" style="margin-bottom: 20px; padding: 0; overflow: hidden;">
+            <div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <h3 style="margin: 0; font-size: 16px; color: #334155;">Annual Performance Record</h3>
+            </div>
+            <div class="table-responsive" style="margin: 0; border: none; max-height: 400px; overflow-y: auto;">
+                <table style="margin: 0; width: 100%; text-align: center;">
+                    <thead style="position: sticky; top: 0; background: #ffffff; z-index: 1;">
+                        <tr>
+                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Year</th>
+                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Rating</th>
+                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Yearly Change</th>
+                            <th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Dev. from Avg</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${[...enrichedHistory].reverse().map(row => {
+                            // Formatting Yearly Change
+                            let changeUI = '<span style="color: #94a3b8;">-</span>';
+                            if (row.yearlyChange > 0) changeUI = `<span style="color: #16a34a; font-weight: bold;">+${row.yearlyChange.toFixed(2)}</span>`;
+                            else if (row.yearlyChange < 0) changeUI = `<span style="color: #dc2626; font-weight: bold;">${row.yearlyChange.toFixed(2)}</span>`;
+                            else if (row.yearlyChange === 0) changeUI = `<span style="color: #64748b;">0.00</span>`;
+
+                            // Formatting Deviation
+                            let devUI = '';
+                            if (row.devFromAvg > 0) devUI = `<span style="color: #0284c7;">+${row.devFromAvg.toFixed(2)}</span>`;
+                            else if (row.devFromAvg < 0) devUI = `<span style="color: #ea580c;">${row.devFromAvg.toFixed(2)}</span>`;
+                            else devUI = `<span style="color: #64748b;">0.00</span>`;
+
+                            return `
+                            <tr>
+                                <td style="font-weight: bold; color: #475569;">${row.year}</td>
+                                <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 12px; font-weight: 800; color: var(--primary);">${row.rating.toFixed(2)}</span></td>
+                                <td>${changeUI}</td>
+                                <td>${devUI}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <div class="card" style="border-left: 5px solid ${recColor}; background: #f8fafc; padding: 25px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <span style="font-size: 24px;">${recIcon}</span>
+                <h3 style="margin: 0; color: ${recColor}; font-size: 18px;">System Recommendation: ${recTitle}</h3>
+            </div>
+            <p style="margin: 0; color: #475569; font-size: 15px; line-height: 1.6;">${recText}</p>
+        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -96,7 +123,6 @@ export function renderAnalyticsPage(data) {
             if (!canvas) return;
             
             const ctx = canvas.getContext('2d');
-            
             const labels = ${chartLabels};
             const chartData = ${chartData};
 
@@ -105,7 +131,7 @@ export function renderAnalyticsPage(data) {
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'NAAS Score',
+                        label: 'NAAS Rating',
                         data: chartData,
                         borderColor: '#2563eb',
                         backgroundColor: 'rgba(37, 99, 235, 0.1)',
@@ -113,39 +139,22 @@ export function renderAnalyticsPage(data) {
                         pointBackgroundColor: '#ffffff',
                         pointBorderColor: '#2563eb',
                         pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
+                        pointRadius: 4,
                         fill: true,
-                        tension: 0.3
+                        tension: 0.2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#1e293b',
-                            padding: 12,
-                            titleFont: { size: 14 },
-                            bodyFont: { size: 16, weight: 'bold' },
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return 'Rating: ' + context.parsed.y.toFixed(2);
-                                }
-                            }
-                        }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
-                        y: {
+                        y: { 
                             beginAtZero: false,
-                            grid: { color: '#e2e8f0', drawBorder: false },
-                            ticks: { font: { size: 12 }, color: '#64748b' }
+                            grid: { color: '#e2e8f0' }
                         },
-                        x: {
-                            grid: { display: false, drawBorder: false },
-                            ticks: { font: { size: 12, weight: 'bold' }, color: '#475569' }
+                        x: { 
+                            grid: { display: false }
                         }
                     }
                 }
