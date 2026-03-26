@@ -56,26 +56,32 @@ export function renderComparePage(journals) {
         window.removeJ = (id) => { selected = selected.filter(x => x.id !== id); updateUI(); if(selected.length > 0) document.getElementById('compare-form').submit(); else window.location.href = '/compare'; };
         updateUI();
 
-        const inp = document.getElementById('compare-search'); const dd = document.getElementById('compare-dropdown');
-        if(inp) {
-            inp.addEventListener('input', async () => {
-                const val = inp.value.trim(); if(val.length < 2) { dd.style.display = 'none'; return; }
-                try {
-                    const res = await fetch('/?ajax_search=' + encodeURIComponent(val)); const data = await res.json();
-                    if(data.length > 0) {
-                        dd.innerHTML = data.map(item => {
-                            const safeName = item.Name.replace(/'/g, "\\\\'"); if(selected.some(s => s.id == item.master_id)) return '';
-                            return '<div class="autocomplete-item" onclick="window.addJournal(\\'' + item.master_id + '\\', \\'' + safeName + '\\', \\'' + item.ISSN + '\\')">' +
-                                   '<span style="display:block; font-weight:bold; color:var(--primary);">' + item.Name + '</span>' +
-                                   '<small style="color:#666;">ISSN: ' + item.ISSN + '</small></div>';
-                        }).join('');
-                        dd.style.display = dd.innerHTML.trim() === '' ? 'none' : 'block';
-                    } else { dd.style.display = 'none'; }
-                } catch (err) { console.error(err); }
-            });
-            window.addJournal = function(id, name, issn) { if(selected.length < 5) { selected.push({id, name, issn}); inp.value = ''; dd.style.display = 'none'; updateUI(); } };
-            document.addEventListener('click', (e) => { if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; });
-        }
+        const inp = document.getElementById('main-search');
+      const dd = document.getElementById('search-dropdown');
+      if(inp) {
+        inp.addEventListener('input', async () => {
+          const val = inp.value.trim();
+          if(val.length < 2) { dd.style.display = 'none'; return; }
+          try {
+            const res = await fetch('/?ajax_search=' + encodeURIComponent(val));
+            const data = await res.json();
+            if(data.length > 0) {
+              dd.innerHTML = data.map(item => {
+                 // HARDENED: Strip invisible line-breaks and nulls before escaping quotes
+                 const rawName = item.Name ? String(item.Name) : "Unknown";
+                 const safeName = rawName.replace(/[\r\n]+/g, " ").replace(/'/g, "\\\\'");
+                 
+                 return '<div class="autocomplete-item" onclick="window.selectJournal(\\'' + safeName + '\\')">' +
+                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
+                        '<small style="color:#666;">ISSN: ' + (item.ISSN || 'N/A') + '</small></div>';
+              }).join('');
+              dd.style.display = 'block';
+            } else { dd.style.display = 'none'; }
+          } catch (err) { console.error(err); }
+        });
+        window.selectJournal = function(val) { inp.value = val; dd.style.display = 'none'; document.getElementById('search-form').submit(); };
+        document.addEventListener('click', (e) => { if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; });
+      }
         
         ${processedJournals.length > 0 ? `
         setTimeout(() => { 
