@@ -3,13 +3,12 @@ export function renderAnalyticsPage(data) {
         return `<div class="card" style="text-align: center; padding: 50px;"><h2>No Data Found</h2><a href="/" class="btn">Return to Search</a></div>`;
     }
 
-    // 1. Prepare Chart Data (Chronological: 2015 -> Current)
+    // 1. Prepare Chart Data
     const chartLabels = JSON.stringify(data.history.map(row => row.year));
     const chartData = JSON.stringify(data.history.map(row => row.rating));
-    // NEW: Create an array of the average rating to plot a straight horizontal line
     const chartAvgData = JSON.stringify(data.history.map(() => data.avg_rating));
 
-    // 2. Prepare Table Data (Calculate Yearly Change and Deviation before reversing)
+    // 2. Prepare Table Data (Yearly Change & Deviation)
     const enrichedHistory = data.history.map((row, index, arr) => {
         let yearlyChange = null;
         if (index > 0) {
@@ -19,23 +18,74 @@ export function renderAnalyticsPage(data) {
         return { ...row, yearlyChange, devFromAvg };
     });
 
-    // 3. Prepare Recommendation Logic based on Volatility (CV)
-    let recTitle = "Highly Recommended";
-    let recText = "This journal shows stable historical ratings, making it a reliable choice for consistent CAS/API score accumulation.";
+    // ==========================================
+    // METRICS CALCULATION (Peaks, Streaks, & CAGR)
+    // ==========================================
+    const history = data.history;
+    const latestRating = history[history.length - 1].rating;
+    const latestYear = history[history.length - 1].year;
+    
+    const peakRating = Math.max(...history.map(r => r.rating));
+    const peakYear = history.find(r => r.rating === peakRating).year;
+    const dropFromPeak = peakRating - latestRating;
+
+    let latestYoY = history.length > 1 ? history[history.length - 1].rating - history[history.length - 2].rating : 0;
+
+    // 1. Calculate Consecutive Declines (The Streak)
+    let consecutiveDeclines = 0;
+    for (let i = enrichedHistory.length - 1; i > 0; i--) {
+        if (enrichedHistory[i].yearlyChange < 0) {
+            consecutiveDeclines++;
+        } else if (enrichedHistory[i].yearlyChange > 0) {
+            break; // Streak broken
+        }
+    }
+
+    // 2. Calculate 5-Year CAGR (Compound Annual Growth Rate)
+    let cagr = 0;
+    if (history.length >= 2) {
+        const periods = Math.min(4, history.length - 1); // Up to 4 intervals (5 years total)
+        const beginRating = history[history.length - 1 - periods].rating;
+        cagr = (Math.pow(latestRating / beginRating, 1 / periods) - 1) * 100;
+    }
+
+    // ==========================================
+    // BULLETPROOF RECOMMENDATION ENGINE
+    // ==========================================
+    let recTitle = "Consistent & Reliable";
+    let recText = "This journal has maintained a stable trajectory recently. It is currently performing reliably near its historical standard.";
     let recColor = "#16a34a"; // Green
     let recIcon = "✅";
 
-    if (data.cv > 15) {
-        recTitle = "Caution Advised";
-        recText = "This journal exhibits high rating volatility. There is a significant risk of sudden score drops in future NAAS assessments.";
+    if (consecutiveDeclines >= 3) {
+        recTitle = "Warning: Chronic Decline";
+        recText = `This journal is bleeding value. It has dropped in rating for ${consecutiveDeclines} consecutive years. A sustained negative streak is a major red flag for future stability.`;
         recColor = "#dc2626"; // Red
+        recIcon = "🚨";
+    } else if (latestYoY <= -0.75) {
+        recTitle = "Warning: Sudden Drop";
+        recText = `This journal experienced a sharp drop of ${Math.abs(latestYoY).toFixed(2)} points in the last cycle. Verify its current status and editorial board immediately.`;
+        recColor = "#dc2626"; // Red
+        recIcon = "🚨";
+    } else if (cagr < -2.0) {
+        recTitle = "Negative Long-Term Trend";
+        recText = `Despite minor bounces, the 5-year Compound Annual Growth Rate (CAGR) is a negative ${cagr.toFixed(2)}%. The journal's value is slowly degrading over time.`;
+        recColor = "#ea580c"; // Orange
+        recIcon = "📉";
+    } else if (dropFromPeak >= 1.5) {
+        recTitle = "Degraded from Peak";
+        recText = `This journal is currently ${dropFromPeak.toFixed(2)} points below its all-time high of ${peakRating.toFixed(2)} (achieved in ${peakYear}).`;
+        recColor = "#b45309"; // Amber
         recIcon = "⚠️";
-    } else if (data.cv > 8) {
-        recTitle = "Moderate Fluctuation";
-        recText = "This journal has noticeable rating fluctuations. Monitor its trajectory closely before submitting critical manuscripts.";
-        recColor = "#b45309"; // Orange
-        recIcon = "⚖️";
+    } else if (cagr > 3.0 && latestYoY > 0) {
+        recTitle = "Strong Upward Growth";
+        recText = `This journal shows excellent momentum with a 5-year CAGR of +${cagr.toFixed(2)}%. It is actively building its reputation in the ecosystem.`;
+        recColor = "#0284c7"; // Blue
+        recIcon = "📈";
     }
+
+    // Calculate Percentile for the bottom card
+    const percentile = data.total_journals ? ((data.rank / data.total_journals) * 100).toFixed(1) : 0;
 
     return `
     <div style="max-width: 900px; margin: 0 auto;">
@@ -52,11 +102,25 @@ export function renderAnalyticsPage(data) {
                 <a href="/compare?id1=${data.master_id}" class="btn" style="background: #8b5cf6; padding: 6px 12px; font-size: 13px;">📈 Compare</a>
                 <a href="https://www.google.com/search?q=ISSN+${data.issn}+Journal" target="_blank" class="btn" style="background: #0284c7; padding: 6px 12px; font-size: 13px;">🛡️ Verify via Google</a>
             </div>
-            
-            <div style="display: flex; gap: 20px; font-size: 14px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 15px;">
-                <span><strong>Latest Rating:</strong> <span style="color: var(--primary); font-weight: bold;">${data.latest_rating.toFixed(2)}</span></span>
-                <span><strong>Historical Average:</strong> ${data.avg_rating.toFixed(2)}</span>
-                <span><strong>Volatility (CV):</strong> ${data.cv.toFixed(2)}%</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">
+            <div class="card" style="margin: 0; text-align: center; padding: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">Latest NAAS Rating</h4>
+                <div style="font-size: 36px; font-weight: 900; color: var(--primary);">${latestRating.toFixed(2)}</div>
+                <div style="font-size: 12px; color: #94a3b8;">Current Status</div>
+            </div>
+            <div class="card" style="margin: 0; text-align: center; padding: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">All-Time Peak</h4>
+                <div style="font-size: 32px; font-weight: 700; color: #334155;">${peakRating.toFixed(2)}</div>
+                <div style="font-size: 12px; color: #ea580c; font-weight: bold;">${dropFromPeak > 0 ? `Currently -${dropFromPeak.toFixed(2)} below peak` : 'Currently at Peak'}</div>
+            </div>
+            <div class="card" style="margin: 0; text-align: center; padding: 20px; border-bottom: 4px solid ${latestYoY >= 0 ? '#16a34a' : '#dc2626'};">
+                <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">1-Year Change</h4>
+                <div style="font-size: 26px; font-weight: 800; color: ${latestYoY > 0 ? '#16a34a' : (latestYoY < 0 ? '#dc2626' : '#64748b')}; margin-bottom: 5px;">
+                    ${latestYoY > 0 ? '+' : ''}${latestYoY.toFixed(2)}
+                </div>
+                <div style="font-size: 12px; color: #94a3b8;">5-Yr CAGR: ${cagr > 0 ? '+' : ''}${cagr.toFixed(2)}%</div>
             </div>
         </div>
 
@@ -83,13 +147,11 @@ export function renderAnalyticsPage(data) {
                     </thead>
                     <tbody>
                         ${[...enrichedHistory].reverse().map(row => {
-                            // Formatting Yearly Change
                             let changeUI = '<span style="color: #94a3b8;">-</span>';
                             if (row.yearlyChange > 0) changeUI = `<span style="color: #16a34a; font-weight: bold;">+${row.yearlyChange.toFixed(2)}</span>`;
                             else if (row.yearlyChange < 0) changeUI = `<span style="color: #dc2626; font-weight: bold;">${row.yearlyChange.toFixed(2)}</span>`;
                             else if (row.yearlyChange === 0) changeUI = `<span style="color: #64748b;">0.00</span>`;
 
-                            // Formatting Deviation
                             let devUI = '';
                             if (row.devFromAvg > 0) devUI = `<span style="color: #0284c7;">+${row.devFromAvg.toFixed(2)}</span>`;
                             else if (row.devFromAvg < 0) devUI = `<span style="color: #ea580c;">${row.devFromAvg.toFixed(2)}</span>`;
@@ -108,12 +170,25 @@ export function renderAnalyticsPage(data) {
             </div>
         </div>
 
-        <div class="card" style="border-left: 5px solid ${recColor}; background: #f8fafc; padding: 25px;">
+        <div class="card" style="border-left: 5px solid ${recColor}; background: #f8fafc; padding: 25px; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                 <span style="font-size: 24px;">${recIcon}</span>
                 <h3 style="margin: 0; color: ${recColor}; font-size: 18px;">System Recommendation: ${recTitle}</h3>
             </div>
             <p style="margin: 0; color: #475569; font-size: 15px; line-height: 1.6;">${recText}</p>
+        </div>
+
+        <div class="card" style="border: 1px solid #e2e8f0; background: #ffffff; padding: 25px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <h3 style="margin: 0 0 5px 0; color: #334155; font-size: 18px;">Global Ecosystem Rank</h3>
+                <p style="margin: 0; color: #64748b; font-size: 14px;">Journal standing relative to the entire database for ${latestYear}.</p>
+            </div>
+            <div style="text-align: right; background: #f8fafc; padding: 15px 25px; border-radius: 8px; border: 1px solid #f1f5f9;">
+                <div style="font-size: 28px; font-weight: 900; color: var(--primary);">Rank #${data.rank || '?'}</div>
+                <div style="font-size: 14px; font-weight: bold; color: ${percentile <= 20 ? '#16a34a' : '#64748b'};">
+                    Top ${percentile}% of ${data.total_journals || '?'} Journals
+                </div>
+            </div>
         </div>
 
     </div>
@@ -146,18 +221,18 @@ export function renderAnalyticsPage(data) {
                             pointRadius: 4,
                             fill: true,
                             tension: 0.2,
-                            order: 1 // Ensure this draws on top
+                            order: 1
                         },
                         {
                             label: 'Historical Average',
                             data: avgData,
-                            borderColor: '#94a3b8', // Slate gray for the average line
+                            borderColor: '#94a3b8', 
                             borderWidth: 2,
-                            borderDash: [5, 5], // Dashed line effect
-                            pointRadius: 0, // Remove dots from the average line
+                            borderDash: [5, 5], 
+                            pointRadius: 0, 
                             fill: false,
                             tension: 0,
-                            order: 2
+                            order: 2 
                         }
                     ]
                 },
@@ -165,29 +240,12 @@ export function renderAnalyticsPage(data) {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { 
-                        legend: { 
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                boxWidth: 8
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: '#1e293b',
-                            padding: 12,
-                            titleFont: { size: 14 },
-                            bodyFont: { size: 14 }
-                        }
+                        legend: { display: true, position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+                        tooltip: { backgroundColor: '#1e293b', padding: 12, titleFont: { size: 14 }, bodyFont: { size: 14 } }
                     },
                     scales: {
-                        y: { 
-                            beginAtZero: false,
-                            grid: { color: '#e2e8f0' }
-                        },
-                        x: { 
-                            grid: { display: false }
-                        }
+                        y: { beginAtZero: false, grid: { color: '#e2e8f0' } },
+                        x: { grid: { display: false } }
                     }
                 }
             });
