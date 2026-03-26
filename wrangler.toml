@@ -1,0 +1,8 @@
+name = "naas-engine"
+main = "index.js"
+compatibility_date = "2024-03-26"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "naas_db"
+database_id = "PASTE_YOUR_D1_DATABASE_ID_HERE"
