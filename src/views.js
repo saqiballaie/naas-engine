@@ -359,23 +359,21 @@ export function renderAnalyticsBody(data) {
 }
 
 // ---------------------------------------------------------
-// NEW MULTI-JOURNAL COMPARE MODULE (HANDLES 2 TO 4 JOURNALS)
+// NEW MULTI-JOURNAL COMPARE & RANKING MODULE
 // ---------------------------------------------------------
 export function renderCompareBody(journals) {
-    const colors = ['#0056b3', '#ff8c00', '#28a745', '#dc3545']; // Blue, Orange, Green, Red
+    const defaultColors = ['#0056b3', '#ff8c00', '#28a745', '#dc3545']; // Blue, Orange, Green, Red
     
-    // STATE 1: PICKER (Less than 2 journals selected)
+    // --- STATE 1: PICKER UI (< 2 journals) ---
     if (journals.length < 2) {
-        // If they arrived from a specific journal's "Compare" button, pre-load it.
         const preSelectedJs = journals.length === 1 ? `addJournal('${journals[0].master_id}', '${journals[0].name.replace(/'/g, "\\'")}', '${journals[0].issn}');` : '';
 
         return `
         <div class="card" style="border-top: 5px solid var(--accent); text-align: center; padding-bottom: 40px;">
-            <h2 style="color: var(--primary); margin-bottom: 10px;">Compare Journals</h2>
-            <p style="color: #666; font-size: 15px; margin-bottom: 25px;">Search and select between 2 and 4 journals to instantly compare their NAAS ratings, historical averages, and trajectories.</p>
+            <h2 style="color: var(--primary); margin-bottom: 10px;">Compare & Rank Journals</h2>
+            <p style="color: #666; font-size: 15px; margin-bottom: 25px;">Select up to 4 journals. Our engine will analyze historical data, calculate momentum, and rank them automatically.</p>
             
             <div style="max-width: 700px; margin: 0 auto; background: #fafafa; padding: 25px; border-radius: 8px; border: 1px solid #eee; text-align: left;">
-                
                 <div style="margin-bottom: 20px; position: relative;">
                     <label style="font-size: 12px; font-weight: bold; color: #555;">SEARCH AND ADD JOURNAL</label>
                     <input type="text" id="compare-search" autocomplete="off" placeholder="Type journal name or ISSN..." 
@@ -385,8 +383,7 @@ export function renderCompareBody(journals) {
 
                 <div style="margin-bottom: 20px;">
                     <label style="font-size: 12px; font-weight: bold; color: #555;">SELECTED JOURNALS (<span id="sel-count">0</span>/4)</label>
-                    <ul id="selected-list" style="list-style: none; padding: 0; margin: 10px 0 0 0; display: flex; flex-direction: column; gap: 10px;">
-                        </ul>
+                    <ul id="selected-list" style="list-style: none; padding: 0; margin: 10px 0 0 0; display: flex; flex-direction: column; gap: 10px;"></ul>
                 </div>
                 
                 <form action="/compare" method="GET" id="compare-form" style="margin-top: 25px;">
@@ -396,19 +393,16 @@ export function renderCompareBody(journals) {
             </div>
         </div>
         <script>
-            // Isolated JavaScript for the Compare Picker Module
             const cInp = document.getElementById('compare-search');
             const cDd = document.getElementById('compare-dropdown');
             const cList = document.getElementById('selected-list');
             const hInputs = document.getElementById('hidden-inputs');
             const cBtn = document.getElementById('compare-btn');
             const cCount = document.getElementById('sel-count');
-            
             let selected = [];
 
             function updateUI() {
-                cList.innerHTML = '';
-                hInputs.innerHTML = '';
+                cList.innerHTML = ''; hInputs.innerHTML = '';
                 selected.forEach((j, idx) => {
                     cList.innerHTML += \`<li style="background: white; border: 1px solid #ddd; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                         <div><strong style="color: var(--primary); font-size: 14px;">\${j.name}</strong> <span style="color: #888; font-size: 12px; margin-left: 10px; font-family: monospace;">ISSN: \${j.issn}</span></div>
@@ -418,37 +412,21 @@ export function renderCompareBody(journals) {
                 });
                 
                 cCount.innerText = selected.length;
-                if(selected.length >= 4) {
-                    cInp.placeholder = "Maximum of 4 journals selected. Remove one to add another.";
-                    cInp.disabled = true;
-                } else {
-                    cInp.placeholder = "Type journal name or ISSN...";
-                    cInp.disabled = false;
-                }
+                if(selected.length >= 4) { cInp.placeholder = "Maximum 4 journals. Remove one to add another."; cInp.disabled = true; } 
+                else { cInp.placeholder = "Type journal name or ISSN..."; cInp.disabled = false; }
 
-                if(selected.length >= 2) {
-                    cBtn.style.opacity = '1';
-                    cBtn.style.pointerEvents = 'auto';
-                    cBtn.innerText = 'Compare ' + selected.length + ' Journals';
-                } else {
-                    cBtn.style.opacity = '0.5';
-                    cBtn.style.pointerEvents = 'none';
-                    cBtn.innerText = 'Select at least 2 journals';
-                }
+                if(selected.length >= 2) { cBtn.style.opacity = '1'; cBtn.style.pointerEvents = 'auto'; cBtn.innerText = 'Analyze & Rank ' + selected.length + ' Journals'; } 
+                else { cBtn.style.opacity = '0.5'; cBtn.style.pointerEvents = 'none'; cBtn.innerText = 'Select at least 2 journals'; }
             }
 
             window.addJournal = function(id, name, issn) {
                 if(selected.length >= 4) return;
                 if(selected.find(j => j.id === id)) { alert("Journal already added!"); } 
                 else { selected.push({id, name, issn}); updateUI(); }
-                cInp.value = '';
-                cDd.style.display = 'none';
+                cInp.value = ''; cDd.style.display = 'none';
             };
 
-            window.removeJournal = function(id) {
-                selected = selected.filter(j => j.id !== id);
-                updateUI();
-            };
+            window.removeJournal = function(id) { selected = selected.filter(j => j.id !== id); updateUI(); };
 
             cInp.addEventListener('input', async () => {
                 const val = cInp.value.trim();
@@ -462,93 +440,144 @@ export function renderCompareBody(journals) {
                     } else { cDd.style.display = 'none'; }
                 } catch (err) { console.error(err); }
             });
-
             document.addEventListener('click', (e) => { if (e.target !== cInp && e.target !== cDd) cDd.style.display = 'none'; });
-
-            // Execute pre-selection if passed via URL
             ${preSelectedJs}
-        </script>
-        `;
+        </script>`;
     }
 
-    // STATE 2: RESULTS (2 to 4 journals selected)
-    const getStats = (ratings) => {
-        if (!ratings || ratings.length === 0) return { avg: 0, latest: 0, year: 'N/A' };
-        const sum = ratings.reduce((a, b) => a + b.rating, 0);
+    // --- STATE 2: STATISTICAL ANALYSIS & RANKING ---
+    const calculateAdvancedStats = (journal, originalIndex) => {
+        const ratings = journal.ratings;
+        const n = ratings.length;
+        if (n === 0) return { ...journal, originalIndex, score: -999, rank: 0, latest: 0, avg: 0 }; // Edge case fallback
+
+        const scores = ratings.map(r => r.rating);
+        const latestVal = scores[n - 1];
+        const prevVal = n > 1 ? scores[n - 2] : null;
+        
+        const sum = scores.reduce((a, b) => a + b, 0);
+        const avgScore = sum / n;
+
+        const variance = scores.reduce((a, b) => a + Math.pow(b - avgScore, 2), 0) / n;
+        const stdDev = Math.sqrt(variance);
+
+        let recentAvg = latestVal;
+        let historicalAvg = avgScore;
+        if (n >= 4) {
+            recentAvg = (scores[n-1] + scores[n-2] + scores[n-3]) / 3;
+            const histScores = scores.slice(0, n-3);
+            historicalAvg = histScores.reduce((a, b) => a + b, 0) / histScores.length;
+        } else if (n === 3) {
+            recentAvg = (scores[1] + scores[2]) / 2;
+            historicalAvg = scores[0];
+        }
+
+        const yoyChange = prevVal !== null ? latestVal - prevVal : 0;
+
+        // THE RANKING ALGORITHM
+        // Base Score (40% Latest) + Momentum (40% 3-yr Avg) + Baseline (20% Hist Avg) - Volatility Penalty
+        const compositeScore = (latestVal * 0.40) + (recentAvg * 0.40) + (avgScore * 0.20) - (stdDev * 0.25);
+
+        // Recommendation Logic
+        let recStatus = "Recommended"; let recColor = "var(--success)";
+        if (n < 3) {
+            if (latestVal < avgScore) { recStatus = "Caution"; recColor = "var(--accent)"; }
+        } else {
+            const isSevereCrash = prevVal !== null && yoyChange < -stdDev && stdDev > 0.3;
+            const isSevereSpike = prevVal !== null && yoyChange > stdDev && stdDev > 0.3;
+
+            if (recentAvg >= avgScore && latestVal >= avgScore && !isSevereCrash) {
+                recStatus = "Recommended"; recColor = "var(--success)";
+            } else if (isSevereSpike && historicalAvg < avgScore) {
+                recStatus = "Caution"; recColor = "var(--accent)";
+            } else if (isSevereCrash || (recentAvg < historicalAvg && latestVal < avgScore)) {
+                if (historicalAvg > avgScore + 0.2) { recStatus = "Caution"; recColor = "var(--accent)"; } 
+                else { recStatus = "Not Recommended"; recColor = "var(--danger)"; }
+            } else if (recentAvg < avgScore) {
+                recStatus = "Not Recommended"; recColor = "var(--danger)";
+            } else {
+                recStatus = "Caution"; recColor = "var(--accent)";
+            }
+        }
+
         return {
-            avg: sum / ratings.length,
-            latest: ratings[ratings.length - 1].rating,
-            year: ratings[ratings.length - 1].year
+            ...journal, originalIndex, color: defaultColors[originalIndex],
+            latest: latestVal, year: ratings[n-1].year, avg: avgScore,
+            stdDev: stdDev, recentAvg: recentAvg, score: compositeScore,
+            recStatus: recStatus, recColor: recColor
         };
     };
 
-    const stats = journals.map(j => getStats(j.ratings));
+    // Calculate stats and generate Rankings
+    let analyzedJournals = journals.map((j, idx) => calculateAdvancedStats(j, idx));
+    
+    // Sort descending by algorithmic score to assign ranks
+    const sortedByScore = [...analyzedJournals].sort((a, b) => b.score - a.score);
+    
+    // Map ranks back to the original array (to keep chart colors consistent with user input)
+    analyzedJournals = analyzedJournals.map(j => {
+        const rankIndex = sortedByScore.findIndex(sorted => sorted.master_id === j.master_id);
+        j.rank = rankIndex + 1; // 1st, 2nd, etc.
+        return j;
+    });
 
-    // Combine all years across all journals to create a unified timeline for the graph and table
-    const yearsSet = new Set();
-    journals.forEach(j => j.ratings.forEach(r => yearsSet.add(r.year)));
-    const allYears = Array.from(yearsSet).sort();
+    const rankMedals = { 1: '🥇 1st', 2: '🥈 2nd', 3: '🥉 3rd', 4: '4th' };
 
-    const getRatingForYear = (ratings, year) => {
-        const found = ratings.find(r => r.year === year);
-        return found ? found.rating : null;
-    };
-
-    // Extract data arrays for each journal aligned perfectly to the unified timeline
-    const datasetsData = journals.map(j => allYears.map(y => getRatingForYear(j.ratings, y)));
-
-    // Generate Dynamic Summary Cards
+    // Build UI Summary Cards (Sorted by Rank for the display)
     let summaryCardsHtml = "";
-    journals.forEach((j, idx) => {
+    sortedByScore.forEach((j) => {
         summaryCardsHtml += `
-        <div class="card" style="border-top: 5px solid ${colors[idx]}; margin: 0; padding: 20px;">
-            <div style="font-size: 11px; font-weight: bold; color: ${colors[idx]}; text-transform: uppercase; margin-bottom: 5px;">Journal ${idx + 1}</div>
+        <div class="card" style="border-top: 5px solid ${j.color}; margin: 0; padding: 20px; position: relative; display: flex; flex-direction: column;">
+            <div style="position: absolute; top: -12px; right: 20px; background: #333; color: gold; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                ${rankMedals[j.rank]}
+            </div>
+            <div style="font-size: 11px; font-weight: bold; color: ${j.color}; text-transform: uppercase; margin-bottom: 5px;">Score: ${j.score.toFixed(2)}</div>
             <h3 style="margin: 0 0 10px 0; font-size: 15px; color: #333; line-height: 1.3;">${j.name}</h3>
             <div style="font-family: monospace; font-size: 11px; color: #666; margin-bottom: 15px;">ISSN: ${j.issn}</div>
             
-            <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #eee;">
-                <div style="text-align: left;">
-                    <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: bold;">Hist. Avg</div>
-                    <div style="font-size: 18px; font-weight: bold; color: #555;">${stats[idx].avg.toFixed(2)}</div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: bold;">Latest (${stats[idx].year})</div>
-                    <div style="font-size: 18px; font-weight: bold; color: ${colors[idx]};">${stats[idx].latest.toFixed(2)}</div>
-                </div>
+            <div style="margin-bottom: 15px;">
+                <span style="background: ${j.recColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;">
+                    ${j.recStatus}
+                </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
+                <div><div style="font-size: 9px; color: #999; text-transform: uppercase;">Latest</div><div style="font-size: 16px; font-weight: bold; color: ${j.color};">${j.latest.toFixed(2)}</div></div>
+                <div><div style="font-size: 9px; color: #999; text-transform: uppercase;">10-Yr Avg</div><div style="font-size: 16px; font-weight: bold; color: #555;">${j.avg.toFixed(2)}</div></div>
+                <div><div style="font-size: 9px; color: #999; text-transform: uppercase;">Momentum (3y)</div><div style="font-size: 14px; font-weight: bold; color: #555;">${j.recentAvg.toFixed(2)}</div></div>
+                <div><div style="font-size: 9px; color: #999; text-transform: uppercase;">Volatility (&sigma;)</div><div style="font-size: 14px; font-weight: bold; color: #555;">${j.stdDev.toFixed(2)}</div></div>
             </div>
         </div>`;
     });
 
-    // Generate Dynamic Table Rows (Reverse chronological)
+    // Chart & Timeline Logic
+    const yearsSet = new Set();
+    journals.forEach(j => j.ratings.forEach(r => yearsSet.add(r.year)));
+    const allYears = Array.from(yearsSet).sort();
+
+    const getRatingForYear = (ratings, year) => { const found = ratings.find(r => r.year === year); return found ? found.rating : null; };
+    const datasetsData = analyzedJournals.map(j => allYears.map(y => getRatingForYear(j.ratings, y)));
+
     let tableRowsHtml = "";
     for (let i = allYears.length - 1; i >= 0; i--) {
         const year = allYears[i];
         let rowCells = `<td style="padding: 12px; font-weight: bold;">${year}</td>`;
-        
-        journals.forEach((j, idx) => {
+        analyzedJournals.forEach((j, idx) => {
             const val = datasetsData[idx][i];
-            rowCells += `<td style="padding: 12px; text-align: center;">${val !== null ? `<span style="background:${colors[idx]}; color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">${val.toFixed(2)}</span>` : '<span style="color:#ccc">N/A</span>'}</td>`;
+            rowCells += `<td style="padding: 12px; text-align: center;">${val !== null ? `<span style="background:${j.color}; color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">${val.toFixed(2)}</span>` : '<span style="color:#ccc">N/A</span>'}</td>`;
         });
-
         tableRowsHtml += `<tr style="border-bottom: 1px solid #eee;">${rowCells}</tr>`;
     }
 
-    // Dynamic Table Headers
     let tableHeaders = '<th style="padding: 12px; background: #f8f9fa; text-align: left; width: 80px;">Year</th>';
-    journals.forEach((j, idx) => {
-        tableHeaders += `<th style="padding: 12px; background: #f8f9fa; text-align: center; color: ${colors[idx]}; font-size: 13px;">${j.issn}<br><span style="font-weight:normal; font-size:10px; color:#666;">Journal ${idx+1}</span></th>`;
+    analyzedJournals.forEach((j) => {
+        tableHeaders += `<th style="padding: 12px; background: #f8f9fa; text-align: center; color: ${j.color}; font-size: 13px;">${j.issn}<br><span style="font-weight:normal; font-size:10px; color:#666;">Rank ${j.rank}</span></th>`;
     });
 
-    // Chart.js JSON structure
-    const datasetsJson = journals.map((j, idx) => ({
-        label: j.name,
+    const datasetsJson = analyzedJournals.map((j, idx) => ({
+        label: `[Rank ${j.rank}] ${j.name}`,
         data: datasetsData[idx],
-        borderColor: colors[idx],
-        backgroundColor: colors[idx],
-        fill: false,
-        tension: 0.3,
-        pointRadius: 5,
-        borderWidth: 3
+        borderColor: j.color, backgroundColor: j.color, fill: false, tension: 0.3, pointRadius: 5, borderWidth: 3
     }));
 
     return `
@@ -564,12 +593,17 @@ export function renderCompareBody(journals) {
     <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <a href="/compare" class="btn" style="background: #6c757d; font-size: 13px;">← New Comparison</a>
         <button onclick="window.print()" class="btn" style="background: #17a2b8; font-size: 13px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:-2px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Save PDF
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:-2px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Save PDF Report
         </button>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 25px;">
         ${summaryCardsHtml}
+    </div>
+
+    <div class="card" style="background: #f8f9fa; border: 1px dashed #ccc; padding: 15px 20px; font-size: 12px; color: #555;">
+        <strong style="color: #333;">How is the Rank calculated?</strong> The engine uses a composite algorithm to find the most robust journal. <br>
+        <code>Composite Score = (Latest Rating × 0.40) + (3-Yr Momentum × 0.40) + (10-Yr Avg × 0.20) - (Volatility Penalty)</code>
     </div>
 
     <div class="card">
@@ -583,12 +617,8 @@ export function renderCompareBody(journals) {
         </div>
         <div style="overflow-x: auto;">
             <table style="min-width: ${100 + journals.length * 150}px; width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr>${tableHeaders}</tr>
-                </thead>
-                <tbody>
-                    ${tableRowsHtml}
-                </tbody>
+                <thead><tr>${tableHeaders}</tr></thead>
+                <tbody>${tableRowsHtml}</tbody>
             </table>
         </div>
     </div>
@@ -598,18 +628,10 @@ export function renderCompareBody(journals) {
             const ctx = document.getElementById('compareChart').getContext('2d');
             new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: ${JSON.stringify(allYears)},
-                    datasets: ${JSON.stringify(datasetsJson)}
-                },
+                data: { labels: ${JSON.stringify(allYears)}, datasets: ${JSON.stringify(datasetsJson)} },
                 options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: { 
-                        tooltip: { enabled: true },
-                        legend: { position: 'top', labels: { usePointStyle: true, padding: 15, font: { size: 11 } } }
-                    },
+                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                    plugins: { tooltip: { enabled: true }, legend: { position: 'top', labels: { usePointStyle: true, padding: 15, font: { size: 11 } } } },
                     scales: { y: { title: { display: true, text: 'NAAS Rating' } } }
                 }
             });
