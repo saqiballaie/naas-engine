@@ -1,9 +1,24 @@
+// 1. Get the most recent year available in the database
 export async function getLatestYear(db) {
-  const row = await db.prepare("SELECT MAX(year) as yr FROM naas_ratings").first();
-  return row ? row.yr : 2026;
+    const res = await db.prepare("SELECT MAX(year) as latest FROM naas_ratings").first();
+    return res ? res.latest : 2025;
 }
 
-// Add 'page' to the parameters, default to 1
+// 2. Get global statistics for the ecosystem view
+export async function getGlobalStats(db) {
+    const year = await getLatestYear(db);
+    const total = await db.prepare("SELECT COUNT(DISTINCT issn_clean) as count FROM naas_ratings WHERE year = ?").bind(year).first();
+    const high = await db.prepare("SELECT COUNT(DISTINCT issn_clean) as count FROM naas_ratings WHERE year = ? AND rating >= 6.0").bind(year).first();
+    const avgRes = await db.prepare("SELECT AVG(rating) as avg FROM naas_ratings WHERE year = ?").bind(year).first();
+    
+    return { 
+        total: total ? total.count : 0, 
+        high: high ? high.count : 0, 
+        avg: avgRes && avgRes.avg ? avgRes.avg : 0 
+    };
+}
+
+// 3. Search journals with Pagination and 10Y Avg
 export async function searchJournals(db, year, search, min, max, page = 1) {
     const limit = 50;
     const offset = (page - 1) * limit;
@@ -39,11 +54,12 @@ export async function searchJournals(db, year, search, min, max, page = 1) {
     return results.results || [];
 }
 
+// 4. Get Journal Metrics (Pulls ALL historical data including 2015/2016)
 export async function getJournalMetrics(db, masterId) {
-    // 1. Fetch Master Info
+    // Fetch Master Info
     const master = await db.prepare(`SELECT main_display_name as name FROM journal_master WHERE master_id = ?`).bind(masterId).first();
     
-    // 2. Fetch ALL Historical Ratings (Removed year limits, ordered chronologically)
+    // Fetch ALL Historical Ratings (Removed the 2017 limit, ordered chronologically)
     const ratingsResult = await db.prepare(`
         SELECT r.year, r.rating, v.issn_original as issn
         FROM naas_ratings r
@@ -54,18 +70,18 @@ export async function getJournalMetrics(db, masterId) {
 
     const history = ratingsResult.results || [];
     
-    // 3. Calculate metrics safely
+    // Calculate metrics safely
     const latestRating = history.length > 0 ? history[history.length - 1].rating : null;
     const issn = history.length > 0 ? history[history.length - 1].issn : 'N/A';
     
-    // Calculate 10-Year (or all-time) Average
+    // Calculate All-Time Average
     let avg = null;
     if (history.length > 0) {
         const sum = history.reduce((acc, row) => acc + row.rating, 0);
         avg = sum / history.length;
     }
 
-    // Calculate Volatility (Standard Deviation / Mean)
+    // Calculate Volatility (Coefficient of Variation)
     let cv = null;
     let volatilityStatus = "Stable";
     let volatilityColor = "#16a34a"; // Green
@@ -73,7 +89,7 @@ export async function getJournalMetrics(db, masterId) {
     if (history.length > 1 && avg > 0) {
         const variance = history.reduce((acc, row) => acc + Math.pow(row.rating - avg, 2), 0) / history.length;
         const stdDev = Math.sqrt(variance);
-        cv = (stdDev / avg) * 100; // Coefficient of Variation in %
+        cv = (stdDev / avg) * 100; 
         
         if (cv > 15) {
             volatilityStatus = "Highly Volatile";
@@ -95,65 +111,4 @@ export async function getJournalMetrics(db, masterId) {
         volatility_color: volatilityColor,
         history: history
     };
-}
-  
-  const altNames = Array.from(historicalNamesSet);
-
-  return {
-    name: mainName,
-    issn: primaryIssn,
-    altIssns: altIssns,
-    altNames: altNames,
-    ratings: ratingsData
-  };
-}
-export async function getGlobalStats(db) {
-  const latestYear = await getLatestYear(db);
-  const prevYear = latestYear - 1;
-
-  const yearlyTrends = await db.prepare(`SELECT year, AVG(rating) as avg_rating, COUNT(*) as journal_count FROM naas_ratings GROUP BY year ORDER BY year ASC`).all();
-
-  const distribution = await db.prepare(`
-    SELECT CASE WHEN rating >= 9.0 THEN 'Elite (9.0+)' WHEN rating >= 6.0 THEN 'High (6.0-8.9)' WHEN rating >= 4.0 THEN 'Mid (4.0-5.9)' ELSE 'Developing (<4.0)' END as tier, COUNT(DISTINCT issn_clean) as count
-    FROM naas_ratings WHERE year = ? GROUP BY tier
-  `).bind(latestYear).all();
-
-  const unratedCount = await db.prepare(`
-    SELECT COUNT(DISTINCT issn_clean) as count 
-    FROM naas_ratings 
-    WHERE issn_clean NOT IN (
-      SELECT issn_clean 
-      FROM naas_ratings 
-      WHERE year = ?
-    )
-  `).bind(latestYear).first();
-
-  const added = await db.prepare(`
-    SELECT m.main_display_name as Name, MAX(r1.rating) as rating, MAX(v.issn_original) as ISSN, m.master_id
-    FROM naas_ratings r1 JOIN journal_variants v ON r1.issn_clean = v.issn_clean JOIN journal_master m ON v.master_id = m.master_id
-    WHERE r1.year = ? AND r1.issn_clean NOT IN (SELECT issn_clean FROM naas_ratings WHERE year = ?)
-    GROUP BY m.master_id ORDER BY rating DESC
-  `).bind(latestYear, prevYear).all();
-
-  const removed = await db.prepare(`
-    SELECT m.main_display_name as Name, MAX(r0.rating) as prev_rating, MAX(v.issn_original) as ISSN, m.master_id
-    FROM naas_ratings r0 JOIN journal_variants v ON r0.issn_clean = v.issn_clean JOIN journal_master m ON v.master_id = m.master_id
-    WHERE r0.year = ? AND r0.issn_clean NOT IN (SELECT issn_clean FROM naas_ratings WHERE year = ?)
-    GROUP BY m.master_id ORDER BY prev_rating DESC
-  `).bind(prevYear, latestYear).all();
-
-  const performanceQuery = `
-    WITH stats AS (SELECT issn_clean, AVG(rating) as avg_rating, MAX(CASE WHEN year = ? THEN rating END) as latest_rating FROM naas_ratings GROUP BY issn_clean HAVING latest_rating IS NOT NULL AND avg_rating > 0 AND COUNT(rating) > 2)
-    SELECT m.main_display_name as Name, s.latest_rating, s.avg_rating, ((s.latest_rating - s.avg_rating) / s.avg_rating * 100) as pct_change, MAX(v.issn_original) as ISSN, m.master_id
-    FROM stats s JOIN journal_variants v ON s.issn_clean = v.issn_clean JOIN journal_master m ON v.master_id = m.master_id GROUP BY m.master_id
-  `;
-  const topPerformers = await db.prepare(performanceQuery + ` ORDER BY pct_change DESC LIMIT 10`).bind(latestYear).all();
-  const worstPerformers = await db.prepare(performanceQuery + ` ORDER BY pct_change ASC LIMIT 10`).bind(latestYear).all();
-
-  return {
-    latestYear, prevYear,
-    yearlyTrends: yearlyTrends.results || [], distribution: distribution.results || [],
-    unratedCount: unratedCount ? unratedCount.count : 0, added: added.results || [],
-    removed: removed.results || [], topPerformers: topPerformers.results || [], worstPerformers: worstPerformers.results || []
-  };
 }
