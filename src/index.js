@@ -1,14 +1,22 @@
-import { layout } from './layout.js';
+import { layout } from './ui/base-layout.js';
 import * as db from './database.js';
-import { renderSearchBody, renderAnalyticsBody, renderCompareBody, renderStatisticsBody } from './views.js'; 
+
+// Import Page Renderers
+import { renderSearchPage } from './pages/search-page.js';
+import { renderAnalyticsPage } from './pages/analytics-page.js';
+import { renderComparePage } from './pages/compare-page.js';
+import { renderStatisticsPage } from './pages/statistics-page.js';
 
 export default {
   async fetch(request, env) {
+    // Ensure the D1 database binding exists
     if (!env.DB) return new Response("Error: Database Binding Missing.", { status: 500 });
+    
     const url = new URL(request.url);
     const path = url.pathname;
 
     try {
+      // 1. AJAX Autocomplete (Handled directly for speed)
       if (url.searchParams.has("ajax_search")) {
         const term = url.searchParams.get("ajax_search");
         const results = await env.DB.prepare(`
@@ -17,39 +25,71 @@ export default {
           WHERE m.main_display_name LIKE ? OR v.issn_clean LIKE ? 
           GROUP BY m.master_id LIMIT 8
         `).bind(`%${term}%`, `%${term.replace(/-/g, '')}%`).all();
-        return new Response(JSON.stringify(results.results || []), { headers: { "Content-Type": "application/json" } });
+        return new Response(JSON.stringify(results.results || []), { 
+            headers: { "Content-Type": "application/json" } 
+        });
       }
 
+      // 2. Global Statistics Page
       if (path === "/statistics") {
-        const stats = await db.getGlobalStats(env.DB);
-        return new Response(layout("Statistics Dashboard", renderStatisticsBody(stats), path, stats.latestYear), { headers: { "Content-Type": "text/html" } });
+        const stats = await db.getGlobalStats(env.DB); //
+        const content = renderStatisticsPage(stats);
+        return new Response(layout("Global Statistics", content, path), { 
+            headers: { "Content-Type": "text/html" } 
+        });
       }
 
+      // 3. Individual Journal Analytics Page
       if (path === "/journal") {
         const mid = url.searchParams.get("id");
-        if (!mid) return new Response("Missing ID", { status: 400 });
-        const data = await db.getJournalMetrics(env.DB, mid);
+        if (!mid) return new Response("Missing Journal ID", { status: 400 });
+        
+        const data = await db.getJournalMetrics(env.DB, mid); //
         data.master_id = mid;
-        return new Response(layout(data.name, renderAnalyticsBody(data), path, "N/A"), { headers: { "Content-Type": "text/html" } });
+        
+        const content = renderAnalyticsPage(data);
+        return new Response(layout(data.name, content, path), { 
+            headers: { "Content-Type": "text/html" } 
+        });
       }
 
+      // 4. Comparison Page
       if (path === "/compare") {
-        const ids = [url.searchParams.get("id1"), url.searchParams.get("id2"), url.searchParams.get("id3"), url.searchParams.get("id4")].filter(Boolean);
+        const ids = [
+            url.searchParams.get("id1"), url.searchParams.get("id2"), 
+            url.searchParams.get("id3"), url.searchParams.get("id4")
+        ].filter(Boolean);
+
         let journals = [];
         for (let id of ids) {
-            const jData = await db.getJournalMetrics(env.DB, id);
-            jData.master_id = id;
-            journals.push(jData);
+            const journalData = await db.getJournalMetrics(env.DB, id);
+            journalData.master_id = id;
+            journals.push(journalData);
         }
-        return new Response(layout("Comparison Engine", renderCompareBody(journals), path, "N/A"), { headers: { "Content-Type": "text/html" } });
+        
+        const content = renderComparePage(journals);
+        return new Response(layout("Compare Journals", content, path), { 
+            headers: { "Content-Type": "text/html" } 
+        });
       }
 
+      // 5. Search Portal (Default Landing Page)
       const latestYear = await db.getLatestYear(env.DB);
-      const s = url.searchParams.get("search") || "";
+      const search = url.searchParams.get("search") || "";
       const min = url.searchParams.get("min_rating") || "";
       const max = url.searchParams.get("max_rating") || "";
-      const results = (s || min || max) ? await db.searchJournals(env.DB, latestYear, s, min, max) : [];
-      return new Response(layout("Search", renderSearchBody(s, min, max, latestYear, results, (s || min || max)), path, latestYear), { headers: { "Content-Type": "text/html" } });
-    } catch (e) { return new Response(`Worker Error: ${e.message}`, { status: 500 }); }
+      
+      const isSubmitted = !!(search || min || max);
+      const results = isSubmitted ? await db.searchJournals(env.DB, latestYear, search, min, max) : [];
+
+      const content = renderSearchPage(search, min, max, results, isSubmitted);
+      return new Response(layout("Search Journals", content, path), { 
+          headers: { "Content-Type": "text/html" } 
+      });
+
+    } catch (e) { 
+      // Error handling to prevent total site crashes
+      return new Response(`Engine Error: ${e.message}`, { status: 500 }); 
+    }
   }
 };
