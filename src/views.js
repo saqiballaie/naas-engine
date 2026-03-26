@@ -103,15 +103,15 @@ export function renderAnalyticsBody(data) {
   const latestVal = latestObj.rating;
   const previousVal = previousObj ? previousObj.rating : null;
 
-  // Calculate Mean (Average)
+  // 1. Calculate Mean (Average)
   const sum = scores.reduce((a, b) => a + b, 0);
   const avgScore = sum / n;
 
-  // Calculate Variance & Standard Deviation (Volatility)
+  // 2. Calculate Variance & Standard Deviation (Volatility)
   const variance = scores.reduce((a, b) => a + Math.pow(b - avgScore, 2), 0) / n;
   const stdDev = Math.sqrt(variance);
 
-  // Calculate 3-Year Moving Average vs Historical (Momentum)
+  // 3. Calculate 3-Year Moving Average vs Historical (Momentum)
   let recentAvg = latestVal;
   let historicalAvg = avgScore;
   if (n >= 4) {
@@ -122,6 +122,8 @@ export function renderAnalyticsBody(data) {
       recentAvg = (scores[1] + scores[2]) / 2;
       historicalAvg = scores[0];
   }
+  
+  const yoyChange = previousVal !== null ? latestVal - previousVal : 0;
 
   // --- STATISTICAL RECOMMENDATION ENGINE ---
   let recStatus = "Recommended";
@@ -138,31 +140,31 @@ export function renderAnalyticsBody(data) {
           recReason = "Limited historical data shows a recent dip in the rating.";
       }
   } else {
-      const isSevereCrash = previousVal !== null && (previousVal - latestVal) > stdDev && stdDev > 0.3;
-      const isSevereSpike = previousVal !== null && (latestVal - previousVal) > stdDev && stdDev > 0.3;
+      const isSevereCrash = previousVal !== null && yoyChange < -stdDev && stdDev > 0.3;
+      const isSevereSpike = previousVal !== null && yoyChange > stdDev && stdDev > 0.3;
 
       if (recentAvg >= avgScore && latestVal >= avgScore && !isSevereCrash) {
           recStatus = "Recommended";
           recColor = "var(--success)";
-          recReason = `The journal demonstrates strong, sustained performance. Its recent 3-year momentum (${recentAvg.toFixed(2)}) meets or exceeds its 10-year historical baseline, indicating a reliable publishing venue.`;
+          recReason = `The journal demonstrates strong, sustained performance. Its recent 3-year momentum meets or exceeds its 10-year historical baseline.`;
       } else if (isSevereSpike && historicalAvg < avgScore) {
           recStatus = "Proceed with Caution";
           recColor = "var(--accent)";
-          recReason = `Statistical anomaly detected: While the current rating spiked significantly this year, the older historical average (${historicalAvg.toFixed(2)}) is much lower. Verify if this recent quality improvement is sustainable before publishing.`;
+          recReason = `Statistical anomaly detected: While the current rating spiked significantly this year, the older historical average is much lower. Verify if this recent quality improvement is sustainable.`;
       } else if (isSevereCrash || (recentAvg < historicalAvg && latestVal < avgScore)) {
           if (historicalAvg > avgScore + 0.2) {
               recStatus = "Proceed with Caution";
               recColor = "var(--accent)";
-              recReason = `This journal was historically strong (averaging ${historicalAvg.toFixed(2)}), but statistical variance analysis reveals a severe recent decline. Exercise caution until ratings stabilize.`;
+              recReason = `This journal was historically strong, but statistical variance analysis reveals a severe recent decline. Exercise caution until ratings stabilize.`;
           } else {
               recStatus = "Not Recommended";
               recColor = "var(--danger)";
-              recReason = `The journal shows a sustained downward trajectory. Its recent ratings have crashed below the historical average (${avgScore.toFixed(2)}) and standard deviation thresholds, indicating declining scientific impact.`;
+              recReason = `The journal shows a sustained downward trajectory. Its recent ratings have crashed below the historical average and standard deviation thresholds, indicating declining scientific impact.`;
           }
       } else if (recentAvg < avgScore) {
           recStatus = "Not Recommended";
           recColor = "var(--danger)";
-          recReason = `Statistical trends indicate a persistent underperformance, with the recent moving average (${recentAvg.toFixed(2)}) remaining below the historical baseline.`;
+          recReason = `Statistical trends indicate a persistent underperformance, with the recent moving average remaining below the historical baseline.`;
       } else {
           recStatus = "Proceed with Caution";
           recColor = "var(--accent)";
@@ -170,7 +172,7 @@ export function renderAnalyticsBody(data) {
       }
   }
 
-  // Top Deviation Card
+  // Top Cards Logic
   const topDeviation = latestVal - avgScore;
   const topDevColor = topDeviation >= 0 ? "var(--success)" : "var(--danger)";
   const topDevSign = topDeviation >= 0 ? "+" : "";
@@ -187,20 +189,23 @@ export function renderAnalyticsBody(data) {
       const prev = i > 0 ? ratings[i - 1] : null;
       
       const diffFromAvg = current.rating - avgScore;
-      const yoyChange = prev ? current.rating - prev.rating : 0;
+      const yoy = prev ? current.rating - prev.rating : 0;
       
       const avgColor = diffFromAvg >= 0 ? "var(--success)" : "var(--danger)";
-      const yoyColor = yoyChange > 0 ? "var(--success)" : (yoyChange < 0 ? "var(--danger)" : "#666");
+      const yoyColor = yoy > 0 ? "var(--success)" : (yoy < 0 ? "var(--danger)" : "#666");
 
       tableRowsHtml += `
-        <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 12px;"><strong>${current.year}</strong></td>
+        <tr style="border-bottom: 1px solid #eee; background: ${i === n-1 ? '#fcfdfc' : 'transparent'};">
+            <td style="padding: 12px;"><strong>${current.year}</strong> ${i === n-1 ? '<span style="font-size:10px; color:var(--primary); margin-left:5px;">(Latest)</span>' : ''}</td>
             <td style="padding: 12px; text-align: center;"><span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${current.rating.toFixed(2)}</span></td>
-            <td style="padding: 12px; text-align: center; color: ${yoyColor}; font-weight: bold;">${prev ? (yoyChange > 0 ? '+' : '') + yoyChange.toFixed(2) : '-'}</td>
+            <td style="padding: 12px; text-align: center; color: ${yoyColor}; font-weight: bold;">${prev ? (yoy > 0 ? '+' : '') + yoy.toFixed(2) : '-'}</td>
             <td style="padding: 12px; text-align: center; color: ${avgColor}; font-weight: bold;">${(diffFromAvg > 0 ? '+' : '') + diffFromAvg.toFixed(2)}</td>
         </tr>
       `;
   }
+
+  // Math Table for Decision Matrix
+  const statusBadge = (condition) => condition ? `<span style="background:var(--success); color:white; padding:2px 6px; border-radius:4px; font-size:11px;">PASS</span>` : `<span style="background:var(--danger); color:white; padding:2px 6px; border-radius:4px; font-size:11px;">FAIL/WARN</span>`;
 
   return `
     <div class="card">
@@ -215,18 +220,22 @@ export function renderAnalyticsBody(data) {
         </div>
     </div>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">
-        <div class="card" style="text-align: center; border-left: 5px solid #6c757d; margin: 0;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="card" style="text-align: center; border-left: 5px solid #6c757d; margin: 0; padding: 20px 10px;">
             <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Historical Average</small>
-            <div style="font-size: 32px; font-weight: bold; color: #6c757d;">${avgScore.toFixed(2)}</div>
+            <div style="font-size: 26px; font-weight: bold; color: #6c757d; line-height: 1.2; margin-top: 5px;">${avgScore.toFixed(2)}</div>
         </div>
-        <div class="card" style="text-align: center; border-left: 5px solid var(--primary); margin: 0;">
+        <div class="card" style="text-align: center; border-left: 5px solid var(--primary); margin: 0; padding: 20px 10px;">
             <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Latest Rating (${latestObj.year})</small>
-            <div style="font-size: 32px; font-weight: bold; color: var(--primary);">${latestVal.toFixed(2)}</div>
+            <div style="font-size: 26px; font-weight: bold; color: var(--primary); line-height: 1.2; margin-top: 5px;">${latestVal.toFixed(2)}</div>
         </div>
-        <div class="card" style="text-align: center; border-left: 5px solid ${topDevColor}; margin: 0;">
-            <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Deviation from Average</small>
-            <div style="font-size: 32px; font-weight: bold; color: ${topDevColor};">${topDevSign}${topDeviation.toFixed(2)}</div>
+        <div class="card" style="text-align: center; border-left: 5px solid ${topDevColor}; margin: 0; padding: 20px 10px;">
+            <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Deviation from Avg</small>
+            <div style="font-size: 26px; font-weight: bold; color: ${topDevColor}; line-height: 1.2; margin-top: 5px;">${topDevSign}${topDeviation.toFixed(2)}</div>
+        </div>
+        <div class="card" style="text-align: center; border-left: 5px solid ${recColor}; margin: 0; padding: 20px 10px;">
+            <small style="text-transform: uppercase; color: #999; font-size: 10px; font-weight: bold;">Recommendation</small>
+            <div style="font-size: 18px; font-weight: bold; color: ${recColor}; line-height: 1.2; margin-top: 10px; text-transform: uppercase;">${recStatus}</div>
         </div>
     </div>
 
@@ -264,14 +273,52 @@ export function renderAnalyticsBody(data) {
     </div>
 
     <div class="card" style="border-left: 5px solid ${recColor}; background: #fffcfc;">
-        <h3 style="margin-top: 0; color: #333; font-size: 16px;">Algorithmic Recommendation</h3>
+        <h3 style="margin-top: 0; color: #333; font-size: 16px;">Algorithmic Recommendation Details</h3>
         <p style="font-size: 15px; line-height: 1.6; color: #555;">
-            On the basis of the NAAS rating analysis of the last 10 years and current NAAS trajectory, it is 
+            On the basis of the NAAS rating analysis of the last 10 years and the current NAAS trajectory, it is 
             <strong style="color: ${recColor}; font-size: 16px; text-transform: uppercase;">${recStatus}</strong> to publish in this journal.
         </p>
-        <p style="font-size: 13px; color: #888; margin-bottom: 0; border-top: 1px dashed #ddd; padding-top: 10px;">
-            <strong>Reasoning:</strong> ${recReason}
-        </p>
+        <p style="font-size: 13px; color: #888; margin-bottom: 20px;"><em>Reasoning: ${recReason}</em></p>
+        
+        <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #444; text-transform: uppercase;">Decision Matrix Calculations</h4>
+        <div style="overflow-x: auto; border: 1px solid #eee; border-radius: 6px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                <thead style="background: #f8f9fa;">
+                    <tr>
+                        <th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Evaluation Metric</th>
+                        <th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Calculated Value</th>
+                        <th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Algorithmic Target</th>
+                        <th style="padding: 8px 12px; border-bottom: 1px solid #ddd;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Long-Term Baseline</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Latest: <b>${latestVal.toFixed(2)}</b></td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">&ge; Hist. Avg (${avgScore.toFixed(2)})</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(latestVal >= avgScore)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Short-Term Momentum</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">3-Yr Avg: <b>${recentAvg.toFixed(2)}</b></td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">&ge; Hist. Avg (${historicalAvg.toFixed(2)})</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(recentAvg >= historicalAvg)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Volatility Index (StdDev)</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">&sigma; = <b>${stdDev.toFixed(2)}</b></td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">&lt; 0.30 (Stability)</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${statusBadge(stdDev < 0.30)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 12px;">Recent Anomaly (YoY)</td>
+                        <td style="padding: 8px 12px;">Change: <b>${yoyChange > 0 ? '+':''}${yoyChange.toFixed(2)}</b></td>
+                        <td style="padding: 8px 12px; color: #666;">Drop &lt; 1 StdDev (${stdDev.toFixed(2)})</td>
+                        <td style="padding: 8px 12px;">${statusBadge(yoyChange >= -stdDev)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
