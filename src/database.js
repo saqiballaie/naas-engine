@@ -40,35 +40,62 @@ export async function searchJournals(db, year, search, min, max, page = 1) {
 }
 
 export async function getJournalMetrics(db, masterId) {
-  // 1. Get current master name (Safe against nulls)
-  const journal = await db.prepare("SELECT main_display_name FROM journal_master WHERE master_id = ?").bind(masterId).first();
-  const mainName = (journal && journal.main_display_name) ? String(journal.main_display_name) : "Unknown Journal";
+    // 1. Fetch Master Info
+    const master = await db.prepare(`SELECT main_display_name as name FROM journal_master WHERE master_id = ?`).bind(masterId).first();
+    
+    // 2. Fetch ALL Historical Ratings (Removed year limits, ordered chronologically)
+    const ratingsResult = await db.prepare(`
+        SELECT r.year, r.rating, v.issn_original as issn
+        FROM naas_ratings r
+        JOIN journal_variants v ON r.issn_clean = v.issn_clean
+        WHERE v.master_id = ?
+        ORDER BY r.year ASC
+    `).bind(masterId).all();
 
-  // 2. Get all ISSNs
-  const variants = await db.prepare("SELECT issn_original FROM journal_variants WHERE master_id = ?").bind(masterId).all();
-  const allIssns = (variants.results || []).map(v => v.issn_original).filter(Boolean);
-  
-  const primaryIssn = allIssns.length > 0 ? allIssns[0] : "N/A";
-  const altIssns = allIssns.slice(1);
+    const history = ratingsResult.results || [];
+    
+    // 3. Calculate metrics safely
+    const latestRating = history.length > 0 ? history[history.length - 1].rating : null;
+    const issn = history.length > 0 ? history[history.length - 1].issn : 'N/A';
+    
+    // Calculate 10-Year (or all-time) Average
+    let avg = null;
+    if (history.length > 0) {
+        const sum = history.reduce((acc, row) => acc + row.rating, 0);
+        avg = sum / history.length;
+    }
 
-  // 3. Get historical ratings
-  const ratings = await db.prepare(`
-    SELECT r.year, r.rating, r.journal_name_that_year 
-    FROM naas_ratings r JOIN journal_variants v ON r.issn_clean = v.issn_clean
-    WHERE v.master_id = ? ORDER BY r.year ASC
-  `).bind(masterId).all();
-  
-  const ratingsData = ratings.results || [];
+    // Calculate Volatility (Standard Deviation / Mean)
+    let cv = null;
+    let volatilityStatus = "Stable";
+    let volatilityColor = "#16a34a"; // Green
+    
+    if (history.length > 1 && avg > 0) {
+        const variance = history.reduce((acc, row) => acc + Math.pow(row.rating - avg, 2), 0) / history.length;
+        const stdDev = Math.sqrt(variance);
+        cv = (stdDev / avg) * 100; // Coefficient of Variation in %
+        
+        if (cv > 15) {
+            volatilityStatus = "Highly Volatile";
+            volatilityColor = "#dc2626"; // Red
+        } else if (cv > 8) {
+            volatilityStatus = "Moderate Fluctuation";
+            volatilityColor = "#b45309"; // Orange
+        }
+    }
 
-  // 4. Extract unique historical names (Hardened against nulls)
-  const historicalNamesSet = new Set();
-  ratingsData.forEach(r => {
-      // Safely convert to string before trimming to prevent crashes
-      const histName = r.journal_name_that_year ? String(r.journal_name_that_year) : "";
-      if (histName && histName.trim() !== mainName.trim()) {
-          historicalNamesSet.add(histName);
-      }
-  });
+    return {
+        master_id: masterId,
+        name: master ? master.name : "Unknown Journal",
+        issn: issn,
+        latest_rating: latestRating,
+        avg_rating: avg,
+        cv: cv,
+        volatility_status: volatilityStatus,
+        volatility_color: volatilityColor,
+        history: history
+    };
+}
   
   const altNames = Array.from(historicalNamesSet);
 
