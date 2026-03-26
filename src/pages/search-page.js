@@ -70,10 +70,12 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
         </div>`}
     </div>` : ''}
 
-    <script>
-     const inp = document.getElementById('main-search');
+<script>
+      const inp = document.getElementById('main-search');
       const dd = document.getElementById('search-dropdown');
+      
       if(inp) {
+        // Listen for typing
         inp.addEventListener('input', async () => {
           const val = inp.value.trim();
           if(val.length < 2) { dd.style.display = 'none'; return; }
@@ -82,20 +84,34 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
             const data = await res.json();
             if(data.length > 0) {
               dd.innerHTML = data.map(item => {
-                 // HARDENED: Strip invisible line-breaks and nulls before escaping quotes
                  const rawName = item.Name ? String(item.Name) : "Unknown";
-                 const safeName = rawName.replace(/[\r\n]+/g, " ").replace(/'/g, "\\\\'");
+                 // Safely clean quotes for the HTML data attribute
+                 const cleanName = rawName.replace(/"/g, '&quot;');
                  
-                 return '<div class="autocomplete-item" onclick="window.selectJournal(\\'' + safeName + '\\')">' +
+                 // Clean HTML without inline onclick handlers
+                 return '<div class="autocomplete-item" data-name="' + cleanName + '">' +
                         '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
                         '<small style="color:#666;">ISSN: ' + (item.ISSN || 'N/A') + '</small></div>';
               }).join('');
               dd.style.display = 'block';
             } else { dd.style.display = 'none'; }
-          } catch (err) { console.error(err); }
+          } catch (err) { console.error("Autocomplete Error:", err); }
         });
-        window.selectJournal = function(val) { inp.value = val; dd.style.display = 'none'; document.getElementById('search-form').submit(); };
-        document.addEventListener('click', (e) => { if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; });
+
+        // Event Delegation: Listen for clicks on the dropdown container instead of individual items
+        dd.addEventListener('click', (e) => {
+            const item = e.target.closest('.autocomplete-item');
+            if (item) {
+                inp.value = item.getAttribute('data-name');
+                dd.style.display = 'none';
+                document.getElementById('search-form').submit(); // Auto-submit search
+            }
+        });
+
+        // Hide dropdown if user clicks anywhere else on the page
+        document.addEventListener('click', (e) => { 
+            if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; 
+        });
       }
     </script>
     `;
