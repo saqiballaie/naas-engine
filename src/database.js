@@ -5,21 +5,21 @@ export async function getLatestYear(db) {
 }
 
 // 2. Get global statistics for the ecosystem view
-// Add or replace this function in your src/database.js
 export async function getGlobalStats(db) {
     const latestYear = await getLatestYear(db);
     const prevYear = latestYear - 1;
 
-    // 1. Yearly Trends (Averages & Counts per year)
+    // 1. Yearly Trends (Averages & Counts per year, excluding 0s from average)
     const trendRes = await db.prepare(`
         SELECT year, AVG(rating) as avg_rating, COUNT(DISTINCT issn_clean) as count 
         FROM naas_ratings 
+        WHERE rating > 0
         GROUP BY year 
         ORDER BY year ASC
     `).all();
     const yearlyTrends = trendRes.results || [];
 
-    // 2. Tier Distribution for the Latest Year
+    // 2. Tier Distribution for the Latest Year (Strictly > 0)
     const distRes = await db.prepare(`
         SELECT 
             CASE 
@@ -30,23 +30,21 @@ export async function getGlobalStats(db) {
             END as tier,
             COUNT(*) as count
         FROM naas_ratings
-        WHERE year = ?
+        WHERE year = ? AND rating > 0
         GROUP BY tier
         ORDER BY count DESC
     `).bind(latestYear).all();
     const distribution = distRes.results || [];
 
-    // Count Unrated (Journals in master that have no rating in latest year)
+    // 3. FIX: Count Unrated (Journals explicitly in NAAS this year but with a 0 or NULL rating)
     const unratedRes = await db.prepare(`
-        SELECT COUNT(DISTINCT m.master_id) as count
-        FROM journal_master m
-        LEFT JOIN journal_variants v ON m.master_id = v.master_id
-        LEFT JOIN naas_ratings r ON v.issn_clean = r.issn_clean AND r.year = ?
-        WHERE r.rating IS NULL
+        SELECT COUNT(DISTINCT issn_clean) as count
+        FROM naas_ratings
+        WHERE year = ? AND (rating IS NULL OR rating = 0)
     `).bind(latestYear).first();
     const unratedCount = unratedRes ? unratedRes.count : 0;
 
-    // 3. Top Performers (Gainers) vs Historical Avg
+    // 4. Top Performers (Gainers) vs Historical Avg
     const gainersRes = await db.prepare(`
         SELECT m.master_id, m.main_display_name as Name, MAX(v.issn_original) as ISSN, 
                curr.rating as latest_rating, 
@@ -54,13 +52,13 @@ export async function getGlobalStats(db) {
         FROM journal_master m
         JOIN journal_variants v ON m.master_id = v.master_id
         JOIN naas_ratings curr ON v.issn_clean = curr.issn_clean AND curr.year = ?
-        JOIN (SELECT issn_clean, AVG(rating) as avg_rating FROM naas_ratings WHERE year < ? GROUP BY issn_clean) prev ON curr.issn_clean = prev.issn_clean
-        WHERE prev.avg_rating > 0
+        JOIN (SELECT issn_clean, AVG(rating) as avg_rating FROM naas_ratings WHERE year < ? AND rating > 0 GROUP BY issn_clean) prev ON curr.issn_clean = prev.issn_clean
+        WHERE prev.avg_rating > 0 AND curr.rating > 0
         GROUP BY m.master_id
         ORDER BY pct_change DESC LIMIT 10
     `).bind(latestYear, latestYear).all();
 
-    // 4. Worst Performers (Declines) vs Historical Avg
+    // 5. Worst Performers (Declines) vs Historical Avg
     const declinesRes = await db.prepare(`
         SELECT m.master_id, m.main_display_name as Name, MAX(v.issn_original) as ISSN, 
                curr.rating as latest_rating, 
@@ -68,32 +66,32 @@ export async function getGlobalStats(db) {
         FROM journal_master m
         JOIN journal_variants v ON m.master_id = v.master_id
         JOIN naas_ratings curr ON v.issn_clean = curr.issn_clean AND curr.year = ?
-        JOIN (SELECT issn_clean, AVG(rating) as avg_rating FROM naas_ratings WHERE year < ? GROUP BY issn_clean) prev ON curr.issn_clean = prev.issn_clean
-        WHERE prev.avg_rating > 0
+        JOIN (SELECT issn_clean, AVG(rating) as avg_rating FROM naas_ratings WHERE year < ? AND rating > 0 GROUP BY issn_clean) prev ON curr.issn_clean = prev.issn_clean
+        WHERE prev.avg_rating > 0 AND curr.rating > 0
         GROUP BY m.master_id
         ORDER BY pct_change ASC LIMIT 10
     `).bind(latestYear, latestYear).all();
 
-    // 5. Added Journals (In latest year, but NOT in any previous year)
+    // 6. Added Journals (In latest year, but NOT in any previous year)
     const addedRes = await db.prepare(`
         SELECT m.master_id, m.main_display_name as Name, MAX(v.issn_original) as ISSN, curr.rating
         FROM journal_master m
         JOIN journal_variants v ON m.master_id = v.master_id
         JOIN naas_ratings curr ON v.issn_clean = curr.issn_clean AND curr.year = ?
         LEFT JOIN naas_ratings old ON curr.issn_clean = old.issn_clean AND old.year < ?
-        WHERE old.rating IS NULL
+        WHERE old.rating IS NULL AND curr.rating > 0
         GROUP BY m.master_id
         ORDER BY curr.rating DESC
     `).bind(latestYear, latestYear).all();
 
-    // 6. Removed Journals (Were in previous year, but NOT in latest year)
+    // 7. Removed Journals (Were in previous year, but NOT in latest year)
     const removedRes = await db.prepare(`
         SELECT m.master_id, m.main_display_name as Name, MAX(v.issn_original) as ISSN, prev.rating as prev_rating
         FROM journal_master m
         JOIN journal_variants v ON m.master_id = v.master_id
         JOIN naas_ratings prev ON v.issn_clean = prev.issn_clean AND prev.year = ?
         LEFT JOIN naas_ratings curr ON prev.issn_clean = curr.issn_clean AND curr.year = ?
-        WHERE curr.rating IS NULL
+        WHERE curr.rating IS NULL AND prev.rating > 0
         GROUP BY m.master_id
         ORDER BY prev.rating DESC
     `).bind(prevYear, latestYear).all();
