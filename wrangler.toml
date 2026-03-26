@@ -9,6 +9,17 @@ database_id = "b1bcff9c-4881-4f56-af06-b68b90987c36"
 
 
 [observability]
-[observability.logs]
 enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
 invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
+
