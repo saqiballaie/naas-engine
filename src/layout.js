@@ -1,6 +1,10 @@
 export function layout(title, content, path, latestYear) {
   const currentYear = new Date().getFullYear();
   
+  // Highlight active tab
+  const isSearchActive = (path === '/' || path === '/index.php') ? 'active' : '';
+  const isCompareActive = (path.startsWith('/compare')) ? 'active' : '';
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -9,7 +13,7 @@ export function layout(title, content, path, latestYear) {
     <title>${title} | NAAS Insights Engine</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #0056b3; --primary-light: #e3f2fd; --success: #28a745; --danger: #dc3545; --bg: #f8f9fa; --border: #dee2e6; --white: #ffffff; }
+        :root { --primary: #0056b3; --primary-light: #e3f2fd; --accent: #ff8c00; --success: #28a745; --danger: #dc3545; --bg: #f8f9fa; --border: #dee2e6; --white: #ffffff; }
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: #333; display: flex; flex-direction: column; min-height: 100vh; }
         header { background: var(--white); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -17,7 +21,7 @@ export function layout(title, content, path, latestYear) {
         .logo h1 { margin: 0; color: var(--primary); font-size: 22px; font-weight: 800; }
         nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
         nav a { color: #495057; text-decoration: none; font-weight: 600; font-size: 14px; padding: 8px 14px; border-radius: 6px; }
-        nav a:hover, nav a.active { color: var(--white); background: var(--primary); }
+        nav a:hover, nav a.${isSearchActive}, nav a.${isCompareActive} { color: var(--white); background: var(--primary); }
         .main-content { flex: 1; }
         .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
         .card { background: var(--white); padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid var(--border); }
@@ -32,7 +36,12 @@ export function layout(title, content, path, latestYear) {
 <header>
     <div class="header-container">
         <div class="logo"><h1>NAAS Insights Engine</h1></div>
-        <nav><ul><li><a href="/" class="active">Search</a></li></ul></nav>
+        <nav>
+            <ul>
+                <li><a href="/" class="${isSearchActive}">Search</a></li>
+                <li><a href="/compare" class="${isCompareActive}">Compare</a></li>
+            </ul>
+        </nav>
     </div>
 </header>
 <div class="main-content"><div class="container">${content}</div></div>
@@ -41,16 +50,8 @@ export function layout(title, content, path, latestYear) {
         <h3 style="color: var(--primary); margin-top: 0; margin-bottom: 10px;">NAAS Insights Engine</h3>
         <p style="font-size: 14px; color: #6c757d; max-width: 600px; margin-bottom: 20px;">Platform designed to provide access to historical NAAS ratings and longitudinal journal performance metrics.</p>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
-            <div>
-                <h4 style="margin: 0 0 5px 0; font-size: 15px;">Lead Developer</h4>
-                <p style="margin: 0; font-weight: bold; color: var(--primary); font-size: 14px;">Dr. Saqib Parvaze Allaie</p>
-                <p style="margin: 0; font-size: 12px; color: #666;">KVK Shamli - SVPUAT</p>
-            </div>
-            <div>
-                <h4 style="margin: 0 0 5px 0; font-size: 15px;">Co-Developer</h4>
-                <p style="margin: 0; font-weight: bold; color: var(--primary); font-size: 14px;">Dr. Sabah Parvaze</p>
-                <p style="margin: 0; font-size: 12px; color: #666;">CoAE&T, SKUAST-Kashmir</p>
-            </div>
+            <div><h4 style="margin: 0 0 5px 0; font-size: 15px;">Lead Developer</h4><p style="margin: 0; font-weight: bold; color: var(--primary); font-size: 14px;">Dr. Saqib Parvaze Allaie</p><p style="margin: 0; font-size: 12px; color: #666;">KVK Shamli - SVPUAT</p></div>
+            <div><h4 style="margin: 0 0 5px 0; font-size: 15px;">Co-Developer</h4><p style="margin: 0; font-weight: bold; color: var(--primary); font-size: 14px;">Dr. Sabah Parvaze</p><p style="margin: 0; font-size: 12px; color: #666;">CoAE&T, SKUAST-Kashmir</p></div>
         </div>
         <div style="margin-top: 20px; display: flex; justify-content: space-between; font-size: 12px; color: #adb5bd;">
             <span>&copy; ${currentYear} | NAAS Insights Engine</span>
@@ -58,6 +59,7 @@ export function layout(title, content, path, latestYear) {
         </div>
     </div>
 </footer>
+
 <script>
   const inp = document.getElementById('main-search');
   const dd = document.getElementById('search-dropdown');
@@ -69,7 +71,6 @@ export function layout(title, content, path, latestYear) {
         const res = await fetch('/?ajax_search=' + encodeURIComponent(val));
         const data = await res.json();
         if(data.length > 0) {
-          // Careful escaping for single quotes in journal names
           dd.innerHTML = data.map(item => {
              const safeName = item.Name.replace(/'/g, "\\'");
              return \`<div class="autocomplete-item" onclick="window.selectJournal('\${safeName}')"><span style="display:block; font-weight:bold; color:var(--primary);">\${item.Name}</span><small style="color:#666;">ISSN: \${item.ISSN}</small></div>\`;
