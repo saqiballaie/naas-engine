@@ -105,9 +105,9 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
                  const cleanName = rawName.replace(/"/g, '&quot;');
                  
                  // Clean HTML without inline onclick handlers
-                 return '<div class="autocomplete-item" data-name="' + cleanName + '">' +
-                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
-                        '<small style="color:#666;">ISSN: ' + (item.ISSN || 'N/A') + '</small></div>';
+                 return '<div class="autocomplete-item" data-id="' + item.master_id + '" data-name="' + cleanName + '">' +
+       '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
+       '<small style="color:#666;">ISSN: ' + (item.ISSN || 'N/A') + '</small></div>';
               }).join('');
               dd.style.display = 'block';
             } else { dd.style.display = 'none'; }
@@ -118,9 +118,8 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
         dd.addEventListener('click', (e) => {
             const item = e.target.closest('.autocomplete-item');
             if (item) {
-                inp.value = item.getAttribute('data-name');
-                dd.style.display = 'none';
-                document.getElementById('search-form').submit(); // Auto-submit search
+                const id = item.getAttribute('data-id'); // We need to add this attribute
+                window.location.href = '/journal?id=' + id;
             }
         });
 
