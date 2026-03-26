@@ -417,3 +417,209 @@ export function renderAnalyticsBody(data) {
     </script>
   `;
 }
+
+
+export function renderCompareBody(data1, data2, id1, failedSearch) {
+    // STATE 1: Journal 1 is selected, waiting for Journal 2
+    if (!data2) {
+        return `
+        <div class="no-print" style="margin-bottom: 20px;">
+            <a href="/journal?id=${id1}" class="btn" style="background: #6c757d; font-size: 13px;">← Back to Analytics</a>
+        </div>
+        
+        <div class="card" style="border-top: 5px solid var(--accent); text-align: center; padding-bottom: 40px;">
+            <h2 style="color: var(--primary); margin-bottom: 5px;">Compare Journals</h2>
+            <p style="color: #666; font-size: 15px;">You have selected <strong>${data1.name}</strong>.</p>
+            
+            <div style="max-width: 600px; margin: 30px auto 0; background: #fafafa; padding: 25px; border-radius: 8px; border: 1px solid #eee;">
+                <h3 style="margin-top: 0; font-size: 16px; color: #333;">Select a second journal to compare:</h3>
+                
+                ${failedSearch ? `<div style="color: var(--danger); font-size: 13px; margin-bottom: 10px;">Could not find a journal matching "${failedSearch}". Please try again.</div>` : ''}
+                
+                <form action="/compare" method="GET" style="position: relative; text-align: left;">
+                    <input type="hidden" name="id1" value="${id1}">
+                    <input type="text" id="main-search" name="search2" autocomplete="off" 
+                           placeholder="Type journal name or ISSN..." required
+                           style="width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 6px; font-size: 15px;">
+                    <div class="autocomplete-dropdown" id="search-dropdown"></div>
+                    <button type="submit" class="btn" style="width: 100%; margin-top: 15px; font-size: 16px; background: var(--accent);">Compare Now</button>
+                </form>
+            </div>
+        </div>
+        `;
+    }
+
+    // STATE 2: Both Journals Selected. Time for Analytics.
+    
+    // Helper function to calculate basic stats
+    const getStats = (ratings) => {
+        if (!ratings || ratings.length === 0) return { avg: 0, latest: 0, year: 'N/A' };
+        const sum = ratings.reduce((a, b) => a + b.rating, 0);
+        return {
+            avg: sum / ratings.length,
+            latest: ratings[ratings.length - 1].rating,
+            year: ratings[ratings.length - 1].year
+        };
+    };
+
+    const s1 = getStats(data1.ratings);
+    const s2 = getStats(data2.ratings);
+
+    // Unify all years for the Chart X-Axis
+    const yearsSet = new Set();
+    data1.ratings.forEach(r => yearsSet.add(r.year));
+    data2.ratings.forEach(r => yearsSet.add(r.year));
+    const allYears = Array.from(yearsSet).sort();
+
+    // Map ratings to the unified timeline (null if missing in a specific year)
+    const getRatingForYear = (ratings, year) => {
+        const found = ratings.find(r => r.year === year);
+        return found ? found.rating : null;
+    };
+
+    const d1Values = allYears.map(y => getRatingForYear(data1.ratings, y));
+    const d2Values = allYears.map(y => getRatingForYear(data2.ratings, y));
+
+    // Build the comparative table rows (Reverse chronological)
+    let tableRowsHtml = "";
+    for (let i = allYears.length - 1; i >= 0; i--) {
+        const year = allYears[i];
+        const val1 = d1Values[i];
+        const val2 = d2Values[i];
+        
+        let diffHtml = '<span style="color:#999">-</span>';
+        if (val1 !== null && val2 !== null) {
+            const diff = val1 - val2;
+            const diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--accent)' : '#666');
+            diffHtml = `<strong style="color:${diffColor}">${diff > 0 ? '+' : ''}${diff.toFixed(2)}</strong>`;
+        }
+
+        tableRowsHtml += `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 12px; font-weight: bold;">${year}</td>
+                <td style="padding: 12px; text-align: center;">${val1 !== null ? `<span style="background:var(--primary); color:white; padding:4px 8px; border-radius:4px;">${val1.toFixed(2)}</span>` : '<span style="color:#ccc">N/A</span>'}</td>
+                <td style="padding: 12px; text-align: center;">${val2 !== null ? `<span style="background:var(--accent); color:white; padding:4px 8px; border-radius:4px;">${val2.toFixed(2)}</span>` : '<span style="color:#ccc">N/A</span>'}</td>
+                <td style="padding: 12px; text-align: center; background: #fcfcfc;">${diffHtml}</td>
+            </tr>
+        `;
+    }
+
+    return `
+    <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <a href="/journal?id=${id1}" class="btn" style="background: #6c757d; font-size: 13px;">← Back to Analytics</a>
+        <button onclick="window.print()" class="btn" style="background: #17a2b8; font-size: 13px;">Save as PDF</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px;">
+        
+        <div class="card" style="border-top: 5px solid var(--primary); margin: 0;">
+            <div style="font-size: 11px; font-weight: bold; color: var(--primary); text-transform: uppercase; margin-bottom: 5px;">Journal A</div>
+            <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #333; line-height: 1.3;">${data1.name}</h3>
+            <div style="font-family: monospace; font-size: 12px; color: #666; margin-bottom: 15px;">ISSN: ${data1.issn}</div>
+            
+            <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #eee;">
+                <div style="text-align: left;">
+                    <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold;">10-Yr Avg</div>
+                    <div style="font-size: 22px; font-weight: bold; color: #555;">${s1.avg.toFixed(2)}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold;">Latest (${s1.year})</div>
+                    <div style="font-size: 22px; font-weight: bold; color: var(--primary);">${s1.latest.toFixed(2)}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="border-top: 5px solid var(--accent); margin: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <div style="font-size: 11px; font-weight: bold; color: var(--accent); text-transform: uppercase;">Journal B</div>
+                <a href="/compare?id1=${id1}" style="font-size: 11px; color: #999; text-decoration: underline;" class="no-print">Change</a>
+            </div>
+            <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #333; line-height: 1.3;">${data2.name}</h3>
+            <div style="font-family: monospace; font-size: 12px; color: #666; margin-bottom: 15px;">ISSN: ${data2.issn}</div>
+            
+            <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #eee;">
+                <div style="text-align: left;">
+                    <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold;">10-Yr Avg</div>
+                    <div style="font-size: 22px; font-weight: bold; color: #555;">${s2.avg.toFixed(2)}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold;">Latest (${s2.year})</div>
+                    <div style="font-size: 22px; font-weight: bold; color: var(--accent);">${s2.latest.toFixed(2)}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px;">Longitudinal Comparison</h3>
+        <div style="height: 400px; width: 100%;"><canvas id="compareChart"></canvas></div>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa;">
+            <h3 style="margin: 0; font-size: 16px;">Comparative Data Matrix</h3>
+        </div>
+        <div style="overflow-x: auto;">
+            <table style="min-width: 600px; width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding: 12px; background: #f8f9fa; text-align: left; width: 100px;">Year</th>
+                        <th style="padding: 12px; background: #f8f9fa; text-align: center; color: var(--primary);">Journal A</th>
+                        <th style="padding: 12px; background: #f8f9fa; text-align: center; color: var(--accent);">Journal B</th>
+                        <th style="padding: 12px; background: #f8f9fa; text-align: center;">Differential (A - B)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRowsHtml}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        setTimeout(() => {
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ${JSON.stringify(allYears)},
+                    datasets: [
+                        { 
+                            label: 'Journal A', 
+                            data: ${JSON.stringify(d1Values)}, 
+                            borderColor: '#0056b3', 
+                            backgroundColor: '#0056b3', 
+                            fill: false, 
+                            tension: 0.3, 
+                            pointRadius: 6,
+                            borderWidth: 3
+                        },
+                        { 
+                            label: 'Journal B', 
+                            data: ${JSON.stringify(d2Values)}, 
+                            borderColor: '#ff8c00', 
+                            backgroundColor: '#ff8c00', 
+                            fill: false, 
+                            tension: 0.3, 
+                            pointRadius: 6,
+                            borderWidth: 3
+                        }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { 
+                        tooltip: { enabled: true },
+                        legend: { position: 'top', labels: { usePointStyle: true, padding: 20 } }
+                    },
+                    scales: {
+                        y: { title: { display: true, text: 'NAAS Rating' } }
+                    }
+                }
+            });
+        }, 150);
+    </script>
+    `;
+}
