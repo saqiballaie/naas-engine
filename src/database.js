@@ -54,12 +54,10 @@ export async function searchJournals(db, year, search, min, max, page = 1) {
     return results.results || [];
 }
 
-// 4. Get Journal Metrics (Pulls ALL historical data including 2015/2016)
+// 4. Get Journal Metrics (Now includes Global Rank)
 export async function getJournalMetrics(db, masterId) {
-    // Fetch Master Info
     const master = await db.prepare(`SELECT main_display_name as name FROM journal_master WHERE master_id = ?`).bind(masterId).first();
     
-    // Fetch ALL Historical Ratings (Removed the 2017 limit, ordered chronologically)
     const ratingsResult = await db.prepare(`
         SELECT r.year, r.rating, v.issn_original as issn
         FROM naas_ratings r
@@ -70,34 +68,34 @@ export async function getJournalMetrics(db, masterId) {
 
     const history = ratingsResult.results || [];
     
-    // Calculate metrics safely
     const latestRating = history.length > 0 ? history[history.length - 1].rating : null;
+    const latestYear = history.length > 0 ? history[history.length - 1].year : null;
     const issn = history.length > 0 ? history[history.length - 1].issn : 'N/A';
     
-    // Calculate All-Time Average
     let avg = null;
     if (history.length > 0) {
         const sum = history.reduce((acc, row) => acc + row.rating, 0);
         avg = sum / history.length;
     }
 
-    // Calculate Volatility (Coefficient of Variation)
     let cv = null;
-    let volatilityStatus = "Stable";
-    let volatilityColor = "#16a34a"; // Green
-    
     if (history.length > 1 && avg > 0) {
         const variance = history.reduce((acc, row) => acc + Math.pow(row.rating - avg, 2), 0) / history.length;
         const stdDev = Math.sqrt(variance);
         cv = (stdDev / avg) * 100; 
+    }
+
+    // NEW: Calculate the Exact Rank and Percentile for the Latest Year
+    let rank = null;
+    let totalJournals = null;
+    if (latestYear && latestRating !== null) {
+        // Count how many journals have a strictly higher rating this year
+        const rankRes = await db.prepare("SELECT COUNT(DISTINCT issn_clean) as count FROM naas_ratings WHERE year = ? AND rating > ?").bind(latestYear, latestRating).first();
+        rank = rankRes ? rankRes.count + 1 : 1; // +1 because if 0 are higher, you are rank 1
         
-        if (cv > 15) {
-            volatilityStatus = "Highly Volatile";
-            volatilityColor = "#dc2626"; // Red
-        } else if (cv > 8) {
-            volatilityStatus = "Moderate Fluctuation";
-            volatilityColor = "#b45309"; // Orange
-        }
+        // Count total journals this year
+        const totalRes = await db.prepare("SELECT COUNT(DISTINCT issn_clean) as count FROM naas_ratings WHERE year = ?").bind(latestYear).first();
+        totalJournals = totalRes ? totalRes.count : 1;
     }
 
     return {
@@ -107,8 +105,8 @@ export async function getJournalMetrics(db, masterId) {
         latest_rating: latestRating,
         avg_rating: avg,
         cv: cv,
-        volatility_status: volatilityStatus,
-        volatility_color: volatilityColor,
+        rank: rank,
+        total_journals: totalJournals,
         history: history
     };
 }
