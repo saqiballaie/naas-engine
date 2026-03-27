@@ -8,8 +8,8 @@ export function initLineChart(canvasId, labels, datasets) {
             new Chart(document.getElementById('${canvasId}'), {
                 type: 'line',
                 data: {
-                    labels: ${JSON.stringify(labels)},
-                    datasets: ${JSON.stringify(datasets)}
+                    labels: ${JSON.stringify(labels).replace(/</g, '\\u003c')},
+                    datasets: ${JSON.stringify(datasets).replace(/</g, '\\u003c')}
                 },
                 options: { 
                     responsive: true, 
