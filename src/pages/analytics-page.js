@@ -4,11 +4,24 @@ export function renderAnalyticsPage(data) {
         return `<div class="card" style="text-align: center; padding: 50px;"><h2>No Data Found</h2><a href="/" class="btn">Return to Search</a></div>`;
     }
 
-    // 1. Prepare Chart Data (Security Fix: Prevent Script Breakout)
-    const secureStringify = (obj) => JSON.stringify(obj).replace(/</g, '\\u003c');
-    const chartLabels = secureStringify(data.history.map(row => row.year));
-    const chartData = secureStringify(data.history.map(row => row.rating));
-    const chartAvgData = secureStringify(data.history.map(() => data.avg_rating));
+    // 1. Prepare Chart Data for data-* attributes
+    const safeLabels = escapeHTML(JSON.stringify(data.history.map(row => row.year)));
+    const safeDatasets = escapeHTML(JSON.stringify([
+        {
+            label: 'NAAS Rating',
+            data: data.history.map(row => row.rating),
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            borderWidth: 3, pointBackgroundColor: '#ffffff', pointBorderColor: '#2563eb',
+            pointBorderWidth: 2, pointRadius: 4, fill: true, tension: 0.2, order: 1
+        },
+        {
+            label: 'Historical Average',
+            data: data.history.map(() => data.avg_rating),
+            borderColor: '#94a3b8', borderWidth: 2, borderDash: [5, 5], 
+            pointRadius: 0, fill: false, tension: 0, order: 2 
+        }
+    ]));
 
     // 2. Prepare Table Data (Yearly Change & Deviation)
     const enrichedHistory = data.history.map((row, index, arr) => {
