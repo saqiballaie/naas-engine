@@ -92,23 +92,39 @@ export default {
         return response;
       }
 
-      // 3. Journal Analytics (Validated Input)
+      // 3. Journal Analytics (Optimized with Edge Caching)
       // -------------------------------------------------------------
       if (path === "/journal") {
         const rawId = url.searchParams.get("id");
         if (!rawId) return Response.redirect(url.origin + "/", 302);
 
-        const data = await db.getJournalMetrics(env.DB, rawId);
-        data.master_id = rawId;
-        
-        return new Response(layout(data.name, renderAnalyticsPage(data), path), { 
-            headers: { 
-                "Content-Type": "text/html",
-                ...secHeaders
-            } 
-        });
-      }
+        // Define the cache key using the exact URL (which includes the ?id= parameter)
+        const cacheKey = new Request(url.toString(), request);
+        let response = await cache.match(cacheKey);
 
+        if (!response) {
+            // If not in cache, fetch from the database
+            const data = await db.getJournalMetrics(env.DB, rawId);
+            data.master_id = rawId;
+            
+            // Build the HTML
+            const content = renderAnalyticsPage(data);
+            
+            // Create the response with caching headers AND security headers
+            response = new Response(layout(data.name, content, path), { 
+                headers: { 
+                    "Content-Type": "text/html",
+                    "Cache-Control": "public, max-age=86400", // Cache for 24 hours at the Edge
+                    ...secHeaders
+                } 
+            });
+            
+            // Store the HTML in the cache asynchronously so it doesn't block the user
+            ctx.waitUntil(cache.put(cacheKey, response.clone()));
+        }
+
+        return response;
+      }
       // 4. Comparison Engine (Multi-ID Parsing)
       // -------------------------------------------------------------
       if (path === "/compare") {
