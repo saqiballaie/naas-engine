@@ -1,3 +1,4 @@
+import { escapeHTML } from '../utils.js';
 export function renderStatisticsPage(stats) {
     // Prepare Data Attributes for Charts safely
     const safeTrendLabels = escapeHTML(JSON.stringify(stats.yearlyTrends.map(d => d.year)));
