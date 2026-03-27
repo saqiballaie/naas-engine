@@ -55,6 +55,12 @@ export function renderAnalyticsPage(data) {
         hasPrePeakData = true;
     }
 
+    // NEW: Calculate the 10-Year Average
+    const last10History = history.slice(-10);
+    const avg10Year = last10History.length > 0 
+        ? last10History.reduce((acc, r) => acc + r.rating, 0) / last10History.length 
+        : 0;
+    
     let latestYoY = history.length > 1 ? history[history.length - 1].rating - history[history.length - 2].rating : 0;
 
     // 1. Calculate Consecutive Declines (The Streak)
@@ -156,16 +162,19 @@ export function renderAnalyticsPage(data) {
                 <div style="font-size: 36px; font-weight: 900; color: var(--primary);">${latestRating.toFixed(2)}</div>
                 <div style="font-size: 12px; color: #94a3b8;">Current Status</div>
             </div>
+            
+            <div class="card" style="margin: 0; text-align: center; padding: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">10-Year Average</h4>
+                <div style="font-size: 32px; font-weight: 700; color: #334155;">${avg10Year.toFixed(2)}</div>
+                <div style="font-size: 12px; color: #94a3b8;">Based on last ${last10History.length} years</div>
+            </div>
+
             <div class="card" style="margin: 0; text-align: center; padding: 20px;">
                 <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">All-Time Peak</h4>
                 <div style="font-size: 32px; font-weight: 700; color: #334155;">${peakRating.toFixed(2)}</div>
                 <div style="font-size: 12px; color: #ea580c; font-weight: bold;">${dropFromPeak > 0 ? `Currently -${dropFromPeak.toFixed(2)} below peak` : 'Currently at Peak'}</div>
             </div>
-            <div class="card" style="margin: 0; text-align: center; padding: 20px;">
-                <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">Avg Before Peak</h4>
-                <div style="font-size: 32px; font-weight: 700; color: #334155;">${hasPrePeakData ? avgBeforePeak.toFixed(2) : '-'}</div>
-                <div style="font-size: 12px; color: #94a3b8;">${hasPrePeakData ? `Prior to ${peakYear}` : 'Peak was initial year'}</div>
-            </div>
+
             <div class="card" style="margin: 0; text-align: center; padding: 20px; border-bottom: 4px solid ${latestYoY >= 0 ? '#16a34a' : '#dc2626'};">
                 <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">1-Year Change</h4>
                 <div style="font-size: 26px; font-weight: 800; color: ${latestYoY > 0 ? '#16a34a' : (latestYoY < 0 ? '#dc2626' : '#64748b')}; margin-bottom: 5px;">
