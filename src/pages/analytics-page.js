@@ -162,7 +162,12 @@ export function renderAnalyticsPage(data) {
         <div class="card" style="margin-bottom: 20px; padding: 20px;">
             <h3 style="margin: 0 0 15px 0; color: #334155; font-size: 16px; text-transform: uppercase;">Historical Trend vs Average</h3>
             <div style="position: relative; height: 300px; width: 100%;">
-                <canvas id="ratingChart"></canvas>
+                <canvas id="ratingChart" 
+                        data-chart="true" 
+                        data-chart-type="line" 
+                        data-labels="${safeLabels}" 
+                        data-datasets="${safeDatasets}">
+                </canvas>
             </div>
         </div>
 
@@ -227,64 +232,5 @@ export function renderAnalyticsPage(data) {
         </div>
 
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const canvas = document.getElementById('ratingChart');
-            if (!canvas) return;
-            
-            const ctx = canvas.getContext('2d');
-            const labels = ${chartLabels};
-            const chartData = ${chartData};
-            const avgData = ${chartAvgData};
-
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'NAAS Rating',
-                            data: chartData,
-                            borderColor: '#2563eb',
-                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                            borderWidth: 3,
-                            pointBackgroundColor: '#ffffff',
-                            pointBorderColor: '#2563eb',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                            fill: true,
-                            tension: 0.2,
-                            order: 1
-                        },
-                        {
-                            label: 'Historical Average',
-                            data: avgData,
-                            borderColor: '#94a3b8', 
-                            borderWidth: 2,
-                            borderDash: [5, 5], 
-                            pointRadius: 0, 
-                            fill: false,
-                            tension: 0,
-                            order: 2 
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: true, position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
-                        tooltip: { backgroundColor: '#1e293b', padding: 12, titleFont: { size: 14 }, bodyFont: { size: 14 } }
-                    },
-                    scales: {
-                        y: { beginAtZero: false, grid: { color: '#e2e8f0' } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        });
-    </script>
     `;
 }
