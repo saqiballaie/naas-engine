@@ -78,32 +78,59 @@ document.addEventListener('DOMContentLoaded', () => {
     if (compareState) {
         let selected = JSON.parse(compareState.getAttribute('data-preselected') || '[]');
         
+        // Helper function to forcefully build the URL and navigate
+        const runComparison = () => {
+            if (selected.length === 0) {
+                window.location.href = '/compare';
+                return;
+            }
+            const params = new URLSearchParams();
+            selected.forEach((j, i) => {
+                params.append('id' + (i + 1), j.id);
+            });
+            window.location.href = '/compare?' + params.toString();
+        };
+
+        // When removing a journal, instantly rebuild the URL and reload
         window.removeJ = (id) => { 
             selected = selected.filter(x => x.id !== id); 
             updateCompareUI(); 
-            if(selected.length > 0) document.getElementById('compare-form').submit(); 
-            else window.location.href = '/compare'; 
+            runComparison(); 
         };
 
         function updateCompareUI() {
             const list = document.getElementById('selected-list');
-            const hidden = document.getElementById('hidden-inputs');
             const searchInp = document.getElementById('compare-search');
+            const compareBtn = document.getElementById('compare-btn');
             
-            list.innerHTML = selected.map(j => 
-                '<li style="padding: 12px 15px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">' +
-                '<span style="font-weight: 600; color: #334155; font-size: 14px;">' + j.name + ' <small style="color:#94a3b8; font-weight:normal;">(ISSN: ' + j.issn + ')</small></span>' +
-                '<button type="button" onclick="window.removeJ(\\'' + j.id + '\\')" style="background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; font-weight: bold;">✖ Remove</button></li>'
-            ).join('');
-            
-            hidden.innerHTML = selected.map((j, i) => '<input type="hidden" name="id' + (i+1) + '" value="' + j.id + '">').join('');
-            
-            if (selected.length >= 5) { 
-                searchInp.placeholder = "Maximum of 5 journals reached."; searchInp.disabled = true; 
-            } else { 
-                searchInp.placeholder = "Search by Journal Name or ISSN to add..."; searchInp.disabled = false; 
+            if (list) {
+                list.innerHTML = selected.map(j => 
+                    '<li style="padding: 12px 15px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">' +
+                    '<span style="font-weight: 600; color: #334155; font-size: 14px;">' + j.name + ' <small style="color:#94a3b8; font-weight:normal;">(ISSN: ' + j.issn + ')</small></span>' +
+                    '<button type="button" onclick="window.removeJ(\\'' + j.id + '\\')" style="background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; font-weight: bold;">✖ Remove</button></li>'
+                ).join('');
             }
-            document.getElementById('compare-btn').style.display = selected.length >= 2 ? 'block' : 'none';
+            
+            if (searchInp) {
+                if (selected.length >= 5) { 
+                    searchInp.placeholder = "Maximum of 5 journals reached."; searchInp.disabled = true; 
+                } else { 
+                    searchInp.placeholder = "Search by Journal Name or ISSN to add..."; searchInp.disabled = false; 
+                }
+            }
+            
+            if (compareBtn) {
+                compareBtn.style.display = selected.length >= 2 ? 'block' : 'none';
+            }
+        }
+
+        // Forceful Event Listener for the "Run Comparison Analysis" button
+        const compareBtn = document.getElementById('compare-btn');
+        if (compareBtn) {
+            compareBtn.addEventListener('click', (e) => {
+                e.preventDefault(); // Stop standard form logic completely
+                runComparison();    // Force navigation via JS
+            });
         }
 
         setupAutocomplete('compare-search', 'compare-dropdown', (item, inp, dd) => {
