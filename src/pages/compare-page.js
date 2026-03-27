@@ -1,3 +1,4 @@
+import { escapeHTML } from '../utils.js';
 export function renderComparePage(journals) {
     const preselected = journals.map(j => ({ id: j.master_id, name: j.name, issn: j.issn }));
     const chartColors = ['#0056b3', '#ff8c00', '#28a745', '#dc3545', '#8b5cf6'];
