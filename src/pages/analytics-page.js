@@ -152,7 +152,7 @@ export function renderAnalyticsPage(data) {
                 
                 <a href="/" class="btn" style="background: #475569; padding: 6px 12px; font-size: 13px;">🔍 New Search</a>
                 <a href="/compare?id1=${data.master_id}" class="btn" style="background: #8b5cf6; padding: 6px 12px; font-size: 13px;">📈 Compare</a>
-                <a href="https://www.google.com/search?q=ISSN+${data.issn}+Journal" target="_blank" class="btn" style="background: #0284c7; padding: 6px 12px; font-size: 13px;">🛡️ Verify via Google</a>
+                <a href="https://www.google.com/search?q=ISSN+${data.issn}+Journal" target="_blank" class="btn" style="background: #0284c7; padding: 6px 12px; font-size: 13px;">🛡️ Search via Google</a>
             </div>
         </div>
 
