@@ -22,6 +22,13 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const cache = caches.default;
+    
+    // Security Fix: Standard Security Headers
+    const secHeaders = {
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+    };
 
     try {
       // 1. AJAX Autocomplete (Optimized with Edge Caching)
@@ -42,7 +49,8 @@ export default {
             response = new Response(JSON.stringify(results.results || []), { 
                 headers: { 
                   "Content-Type": "application/json", 
-                  "Cache-Control": "public, max-age=86400" 
+                  "Cache-Control": "public, max-age=86400",
+                  ...secHeaders
                 } 
             });
             ctx.waitUntil(cache.put(cacheKey, response.clone()));
@@ -131,8 +139,9 @@ export default {
         const latestYear = await db.getLatestYear(env.DB);
         const search = url.searchParams.get("search") || "";
         
-        // NEW: Get the page number from URL
-        const page = parseInt(url.searchParams.get("page") || "1");
+        // NEW: Get the page number from URL (Security Fix: Prevent negative offset crashes)
+        const parsedPage = parseInt(url.searchParams.get("page") || "1");
+        const page = isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
         
         const rawMin = url.searchParams.get("min_rating");
         const rawMax = url.searchParams.get("max_rating");
