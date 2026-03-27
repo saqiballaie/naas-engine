@@ -8,6 +8,7 @@ import { renderComparePage } from './pages/compare-page.js';
 import { renderStatisticsPage } from './pages/statistics-page.js';
 import { renderDisclaimer, renderTerms } from './pages/legal-pages.js';
 import { renderAboutPage } from './pages/about-page.js';
+import { appJS } from './app-client.js';
 
 export default {
   /**
@@ -23,12 +24,24 @@ export default {
     const path = url.pathname;
     const cache = caches.default;
     
-    // Security Fix: Standard Security Headers
+    // Security Fix: Strict CSP with NO 'unsafe-inline' for scripts
     const secHeaders = {
         "X-Frame-Options": "DENY",
         "X-Content-Type-Options": "nosniff",
-        "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';"
     };
+
+    // Serve the centralized client script
+    if (path === "/app.js") {
+        return new Response(appJS, { 
+            headers: { 
+                "Content-Type": "application/javascript", 
+                "Cache-Control": "public, max-age=31536000",
+                ...secHeaders
+            } 
+        });
+    }
 
     try {
       // 1. AJAX Autocomplete (Optimized with Edge Caching)
