@@ -117,47 +117,6 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
         .quick-chip.elite { color: #1d4ed8; background: #dbeafe; border-color: #bfdbfe; }
     </style>
 
-    <script>
-      const inp = document.getElementById('main-search');
-      const dd = document.getElementById('search-dropdown');
-      
-      if(inp && dd) {
-        inp.addEventListener('input', async () => {
-          const val = inp.value.trim();
-          if(val.length < 2) { dd.style.display = 'none'; return; }
-          try {
-            const res = await fetch('/?ajax_search=' + encodeURIComponent(val));
-            const data = await res.json();
-            if(data.length > 0) {
-              dd.innerHTML = data.map(item => {
-                 const rawName = item.Name || item.name || "Unknown";
-                 const id = item.master_id;
-                 const issn = item.ISSN || item.issn || 'N/A';
-                 // Security Fix: Escape all database strings before DOM insertion
-                 const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-                 const safeIssn = issn.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                 
-                 return '<div class="autocomplete-item" data-id="' + id + '" data-name="' + safeName + '">' +
-                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + safeName + '</span>' +
-                        '<small style="color:#666;">ISSN: ' + safeIssn + '</small></div>';
-              }).join('');
-              dd.style.display = 'block';
-            } else { dd.style.display = 'none'; }
-          } catch (err) { console.error("Autocomplete Error:", err); }
-        });
 
-        dd.addEventListener('click', (e) => {
-            const item = e.target.closest('.autocomplete-item');
-            if (item) {
-                const id = item.getAttribute('data-id');
-                window.location.href = '/journal?id=' + id;
-            }
-        });
-
-        document.addEventListener('click', (e) => { 
-            if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; 
-        });
-      }
-    </script>
     `;
 }
