@@ -83,7 +83,8 @@ export default {
             response = new Response(layout("Global Statistics", content, path), { 
                 headers: { 
                   "Content-Type": "text/html", 
-                  "Cache-Control": "public, max-age=86400" 
+                  "Cache-Control": "public, max-age=86400" ,
+                  ...secHeaders
                 } 
             });
             ctx.waitUntil(cache.put(cacheKey, response.clone()));
@@ -101,7 +102,10 @@ export default {
         data.master_id = rawId;
         
         return new Response(layout(data.name, renderAnalyticsPage(data), path), { 
-            headers: { "Content-Type": "text/html" } 
+            headers: { 
+                "Content-Type": "text/html",
+                ...secHeaders
+            } 
         });
       }
 
@@ -122,13 +126,15 @@ export default {
         }
         
         return new Response(layout("Compare Journals", renderComparePage(journals), path), { 
-            headers: { "Content-Type": "text/html" } 
+            headers: { "Content-Type": "text/html" },
+          ...secHeaders
         });
       }
 
       if (path === "/about") {
     return new Response(layout("About the Project", renderAboutPage(), path), { 
-        headers: { "Content-Type": "text/html" } 
+        headers: { "Content-Type": "text/html" },
+      ...secHeaders
     });
 }
 
@@ -142,7 +148,8 @@ export default {
 
       if (path === "/terms") {
           return new Response(layout("Terms of Use", renderTerms(), path), { 
-              headers: { "Content-Type": "text/html" } 
+              headers: { "Content-Type": "text/html" },
+            ...secHeaders
           });
       }
 
@@ -167,8 +174,11 @@ export default {
         const results = isSubmitted ? await db.searchJournals(env.DB, latestYear, search, min, max, page) : [];
 
         // UPDATED: Pass 'page' to the renderer
-        return new Response(layout("Search Journals", renderSearchPage(search, min, max, results, isSubmitted, page), path), { 
-            headers: { "Content-Type": "text/html" } 
+        rreturn new Response(layout("Search Journals", renderSearchPage(search, min, max, results, isSubmitted, page), path), { 
+            headers: { 
+                "Content-Type": "text/html",
+                ...secHeaders
+            } 
         });
       }
 
@@ -184,7 +194,8 @@ export default {
       `;
       return new Response(layout("404 Not Found", notFoundUI, path), { 
           status: 404, 
-          headers: { "Content-Type": "text/html" } 
+          headers: { "Content-Type": "text/html" },
+        ...secHeaders
       });
 
     } catch (e) { 
@@ -202,7 +213,8 @@ export default {
       `;
       return new Response(layout("System Error", errorUI, path), { 
           status: 500, 
-          headers: { "Content-Type": "text/html" } 
+          headers: { "Content-Type": "text/html" },
+        ...secHeaders
       }); 
     }
   }
