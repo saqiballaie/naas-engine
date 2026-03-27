@@ -22,6 +22,12 @@ export function renderComparePage(journals) {
     const sortedYearsDesc = Array.from(allYearsSet).sort((a, b) => b - a);
     const sortedYearsAsc = Array.from(allYearsSet).sort((a, b) => a - b);
 
+    const safePreselected = escapeHTML(JSON.stringify(preselected));
+    const safeLabels = escapeHTML(JSON.stringify(sortedYearsAsc));
+    const safeDatasets = escapeHTML(JSON.stringify(processedJournals.map((j) => { 
+        return { label: j.name, data: sortedYearsAsc.map(y => j.ratingsByYear[y] || null), borderColor: j.color, backgroundColor: j.color, tension: 0.1, pointRadius: 4, borderWidth: 2, spanGaps: true }; 
+    })));
+
     let recommendationHTML = "";
     if (processedJournals.length > 1) {
         const ranked = [...processedJournals].sort((a, b) => b.publishScore - a.publishScore);
@@ -32,92 +38,13 @@ export function renderComparePage(journals) {
     }
 
     return `
-    <div class="card" style="border-top: 5px solid var(--accent);"><h2 style="margin-top: 0; color: #334155;">Compare Journals</h2><p style="color: #64748b;">Add up to 5 journals to analyze head-to-head performance.</p><div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;"><div style="position: relative; margin-bottom: 20px;"><input type="text" id="compare-search" autocomplete="off" placeholder="Search by Journal Name or ISSN to add..." style="width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 6px; font-size: 15px;"><div class="autocomplete-dropdown" id="compare-dropdown"></div></div><ul id="selected-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;"></ul><form action="/compare" method="GET" id="compare-form" style="margin-top: 15px;"><div id="hidden-inputs"></div><button type="submit" id="compare-btn" class="btn" style="width:100%; display:none; background: var(--accent); font-size: 16px;">Run Comparison Analysis</button></form></div></div>
+    <div id="compare-state" data-preselected="${safePreselected}" style="display:none;"></div>
+    <div class="card" style="border-top: 5px solid var(--accent);"><h2 style="margin-top: 0; color: #334155;">Compare Journals</h2>
     
     ${processedJournals.length >= 1 ? `
     ${recommendationHTML}
     <div class="card" style="padding: 0; overflow: hidden;"><div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;"><h3 style="margin: 0; font-size: 16px; color: #334155;">Key Performance Metrics</h3></div><div class="table-responsive" style="border: none; border-radius: 0;"><table><thead><tr style="background: #ffffff;"><th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Journal</th><th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Latest Rating</th><th style="color: #64748b; font-size: 12px; text-transform: uppercase;">10-Yr Avg</th><th style="color: #64748b; font-size: 12px; text-transform: uppercase;">Volatility (CV)</th></tr></thead><tbody>${processedJournals.map(j => `<tr><td><div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; border-radius: 3px; background: ${j.color};"></div><strong style="color: #1e293b;">${j.name}</strong></div></td><td><span style="font-weight: 800; color: var(--primary);">${j.latestScore.toFixed(2)}</span></td><td style="color: #475569; font-weight: 600;">${j.avgScore.toFixed(2)}</td><td><span style="font-weight: 600; color: ${j.cv > 20 ? '#dc2626' : (j.cv < 10 ? '#15803d' : '#b45309')};">${j.cv.toFixed(1)}%</span></td></tr>`).join('')}</tbody></table></div></div>
-    <div class="card"><h3 style="margin-top: 0; color: #334155;">Historical Trajectory</h3><div style="height: 400px;"><canvas id="compareChart"></canvas></div></div>
-    <div class="card" style="padding: 0; overflow: hidden;"><div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;"><h3 style="margin: 0; font-size: 16px; color: #334155;">10-Year Historical Data</h3></div><div class="table-responsive" style="border: none; border-radius: 0;"><table><thead><tr style="background: #ffffff;"><th style="color: #64748b; font-size: 12px; text-transform: uppercase; width: 80px;">Year</th>${processedJournals.map(j => `<th style="color: #1e293b; font-size: 12px;">${j.name}</th>`).join('')}</tr></thead><tbody>${sortedYearsDesc.map(year => `<tr><td style="font-weight: bold; color: #475569;">${year}</td>${processedJournals.map(j => {const rating = j.ratingsByYear[year]; return `<td style="color: ${rating ? '#334155' : '#cbd5e1'}; font-weight: ${rating ? '600' : 'normal'};">${rating ? rating.toFixed(2) : '-'}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div></div>` : ''}
-
-<script>
-        // Security Fix: Prevent Script tag breakout using unicode
-        let selected = ${JSON.stringify(preselected).replace(/</g, '\\u003c')};
-        function updateUI() {
-            const list = document.getElementById('selected-list'); const hidden = document.getElementById('hidden-inputs'); const searchInp = document.getElementById('compare-search');
-            
-            list.innerHTML = selected.map(j => '<li style="padding: 12px 15px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">' +
-                                               '<span style="font-weight: 600; color: #334155; font-size: 14px;">' + j.name + ' <small style="color:#94a3b8; font-weight:normal;">(ISSN: ' + j.issn + ')</small></span>' +
-                                               '<button type="button" onclick="window.removeJ(\\'' + j.id + '\\')" style="background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; font-weight: bold;">✖ Remove</button></li>').join('');
-            hidden.innerHTML = selected.map((j, i) => '<input type="hidden" name="id' + (i+1) + '" value="' + j.id + '">').join('');
-            
-            if (selected.length >= 5) { searchInp.placeholder = "Maximum of 5 journals reached."; searchInp.disabled = true; } else { searchInp.placeholder = "Search by Journal Name or ISSN to add..."; searchInp.disabled = false; }
-            document.getElementById('compare-btn').style.display = selected.length >= 2 ? 'block' : 'none';
-        }
-        window.removeJ = (id) => { selected = selected.filter(x => x.id !== id); updateUI(); if(selected.length > 0) document.getElementById('compare-form').submit(); else window.location.href = '/compare'; };
-        updateUI();
-
-        const inp = document.getElementById('compare-search'); 
-        const dd = document.getElementById('compare-dropdown');
-        
-        if(inp) {
-            inp.addEventListener('input', async () => {
-                const val = inp.value.trim(); if(val.length < 2) { dd.style.display = 'none'; return; }
-                try {
-                    const res = await fetch('/?ajax_search=' + encodeURIComponent(val)); 
-                    const data = await res.json();
-                    if(data.length > 0) {
-                        dd.innerHTML = data.map(item => {
-                            if(selected.some(s => s.id == item.master_id)) return ''; 
-                            
-                            const rawName = item.Name ? String(item.Name) : "Unknown";
-                            const issn = item.ISSN || 'N/A';
-                            
-                            // Security Fix: Fully escape DOM insertions
-                            const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-                            const safeIssn = issn.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                            
-                            return '<div class="autocomplete-item" data-id="' + item.master_id + '" data-name="' + safeName + '" data-issn="' + safeIssn + '">' +
-                                   '<span style="display:block; font-weight:bold; color:var(--primary);">' + safeName + '</span>' +
-                                   '<small style="color:#666;">ISSN: ' + safeIssn + '</small></div>';
-                        }).join('');
-                        dd.style.display = dd.innerHTML.trim() === '' ? 'none' : 'block';
-                    } else { dd.style.display = 'none'; }
-                } catch (err) { console.error("Autocomplete Error:", err); }
-            });
-
-            dd.addEventListener('click', (e) => {
-                const item = e.target.closest('.autocomplete-item');
-                if (item && selected.length < 5) {
-                    const id = item.getAttribute('data-id');
-                    const name = item.getAttribute('data-name');
-                    const issn = item.getAttribute('data-issn');
-                    
-                    selected.push({id, name, issn}); 
-                    inp.value = ''; 
-                    dd.style.display = 'none'; 
-                    updateUI();
-                }
-            });
-
-            document.addEventListener('click', (e) => { if (e.target !== inp && e.target !== dd) dd.style.display = 'none'; });
-        }
-        
-        ${processedJournals.length > 0 ? `
-        setTimeout(() => { 
-            new Chart(document.getElementById('compareChart'), { 
-                type: 'line', 
-                data: { 
-                    // Security Fix: Unicode escaping for chart labels and data
-                    labels: ${JSON.stringify(sortedYearsAsc).replace(/</g, '\\u003c')}, 
-                    datasets: ${JSON.stringify(processedJournals.map((j) => { 
-                        const alignedData = sortedYearsAsc.map(y => j.ratingsByYear[y] || null); 
-                        return { label: j.name, data: alignedData, borderColor: j.color, backgroundColor: j.color, tension: 0.1, pointRadius: 4, borderWidth: 2, spanGaps: true }; 
-                    })).replace(/</g, '\\u003c')} 
-                }, 
-                options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false } } 
-            }); 
-        }, 150);` : ''}
-    </script>
+   <div class="card"><h3 style="margin-top: 0; color: #334155;">Historical Trajectory</h3><div style="height: 400px;"><canvas id="compareChart" data-chart="true" data-chart-type="line" data-labels="${safeLabels}" data-datasets="${safeDatasets}"></canvas></div></div>
+   <div class="card" style="padding: 0; overflow: hidden;"><div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;"><h3 style="margin: 0; font-size: 16px; color: #334155;">10-Year Historical Data</h3></div><div class="table-responsive" style="border: none; border-radius: 0;"><table><thead><tr style="background: #ffffff;"><th style="color: #64748b; font-size: 12px; text-transform: uppercase; width: 80px;">Year</th>${processedJournals.map(j => `<th style="color: #1e293b; font-size: 12px;">${j.name}</th>`).join('')}</tr></thead><tbody>${sortedYearsDesc.map(year => `<tr><td style="font-weight: bold; color: #475569;">${year}</td>${processedJournals.map(j => {const rating = j.ratingsByYear[year]; return `<td style="color: ${rating ? '#334155' : '#cbd5e1'}; font-weight: ${rating ? '600' : 'normal'};">${rating ? rating.toFixed(2) : '-'}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div></div>` : ''}
     `;
 }
