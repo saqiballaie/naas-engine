@@ -131,12 +131,15 @@ export function renderSearchPage(searchTerm, min, max, results, isSearchSubmitte
             if(data.length > 0) {
               dd.innerHTML = data.map(item => {
                  const rawName = item.Name || item.name || "Unknown";
-                 const cleanName = String(rawName).replace(/"/g, '&quot;');
                  const id = item.master_id;
                  const issn = item.ISSN || item.issn || 'N/A';
-                 return '<div class="autocomplete-item" data-id="' + id + '" data-name="' + cleanName + '">' +
-                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
-                        '<small style="color:#666;">ISSN: ' + issn + '</small></div>';
+                 // Security Fix: Escape all database strings before DOM insertion
+                 const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+                 const safeIssn = issn.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                 
+                 return '<div class="autocomplete-item" data-id="' + id + '" data-name="' + safeName + '">' +
+                        '<span style="display:block; font-weight:bold; color:var(--primary);">' + safeName + '</span>' +
+                        '<small style="color:#666;">ISSN: ' + safeIssn + '</small></div>';
               }).join('');
               dd.style.display = 'block';
             } else { dd.style.display = 'none'; }
