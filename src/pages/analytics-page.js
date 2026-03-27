@@ -44,6 +44,17 @@ export function renderAnalyticsPage(data) {
     const peakYear = history.find(r => r.rating === peakRating).year;
     const dropFromPeak = peakRating - latestRating;
 
+    // Calculate Average Rating Before Peak
+    const prePeakHistory = history.filter(r => r.year < peakYear);
+    let avgBeforePeak = 0;
+    let hasPrePeakData = false;
+    
+    if (prePeakHistory.length > 0) {
+        const sumPrePeak = prePeakHistory.reduce((acc, r) => acc + r.rating, 0);
+        avgBeforePeak = sumPrePeak / prePeakHistory.length;
+        hasPrePeakData = true;
+    }
+
     let latestYoY = history.length > 1 ? history[history.length - 1].rating - history[history.length - 2].rating : 0;
 
     // 1. Calculate Consecutive Declines (The Streak)
@@ -149,6 +160,11 @@ export function renderAnalyticsPage(data) {
                 <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">All-Time Peak</h4>
                 <div style="font-size: 32px; font-weight: 700; color: #334155;">${peakRating.toFixed(2)}</div>
                 <div style="font-size: 12px; color: #ea580c; font-weight: bold;">${dropFromPeak > 0 ? `Currently -${dropFromPeak.toFixed(2)} below peak` : 'Currently at Peak'}</div>
+            </div>
+            <div class="card" style="margin: 0; text-align: center; padding: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">Avg Before Peak</h4>
+                <div style="font-size: 32px; font-weight: 700; color: #334155;">${hasPrePeakData ? avgBeforePeak.toFixed(2) : '-'}</div>
+                <div style="font-size: 12px; color: #94a3b8;">${hasPrePeakData ? `Prior to ${peakYear}` : 'Peak was initial year'}</div>
             </div>
             <div class="card" style="margin: 0; text-align: center; padding: 20px; border-bottom: 4px solid ${latestYoY >= 0 ? '#16a34a' : '#dc2626'};">
                 <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase;">1-Year Change</h4>
