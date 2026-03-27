@@ -32,10 +32,10 @@ export function initPieChart(canvasId, labels, data, colors) {
             new Chart(document.getElementById('${canvasId}'), {
                 type: 'pie',
                 data: {
-                    labels: ${JSON.stringify(labels)},
+                    labels: ${JSON.stringify(labels).replace(/</g, '\\u003c')},
                     datasets: [{
-                        data: ${JSON.stringify(data)},
-                        backgroundColor: ${JSON.stringify(colors)}
+                        data: ${JSON.stringify(data).replace(/</g, '\\u003c')},
+                        backgroundColor: ${JSON.stringify(colors).replace(/</g, '\\u003c')}
                     }]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
