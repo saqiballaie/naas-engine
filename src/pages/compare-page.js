@@ -42,7 +42,9 @@ export function renderComparePage(journals) {
     <div class="card" style="padding: 0; overflow: hidden;"><div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;"><h3 style="margin: 0; font-size: 16px; color: #334155;">10-Year Historical Data</h3></div><div class="table-responsive" style="border: none; border-radius: 0;"><table><thead><tr style="background: #ffffff;"><th style="color: #64748b; font-size: 12px; text-transform: uppercase; width: 80px;">Year</th>${processedJournals.map(j => `<th style="color: #1e293b; font-size: 12px;">${j.name}</th>`).join('')}</tr></thead><tbody>${sortedYearsDesc.map(year => `<tr><td style="font-weight: bold; color: #475569;">${year}</td>${processedJournals.map(j => {const rating = j.ratingsByYear[year]; return `<td style="color: ${rating ? '#334155' : '#cbd5e1'}; font-weight: ${rating ? '600' : 'normal'};">${rating ? rating.toFixed(2) : '-'}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div></div>` : ''}
 
 <script>
-        let selected = ${JSON.stringify(preselected)};
+       // Security Fix: Prevent </script> breakout
+        let selected = ${JSON.stringify(preselected).replace(/</g, '\\u003c')};
+        
         function updateUI() {
             const list = document.getElementById('selected-list'); const hidden = document.getElementById('hidden-inputs'); const searchInp = document.getElementById('compare-search');
             
@@ -71,13 +73,15 @@ export function renderComparePage(journals) {
                             if(selected.some(s => s.id == item.master_id)) return ''; // Hide already selected
                             
                             const rawName = item.Name ? String(item.Name) : "Unknown";
-                            const cleanName = rawName.replace(/"/g, '&quot;');
                             const issn = item.ISSN || 'N/A';
                             
-                            // Safe data attributes
-                            return '<div class="autocomplete-item" data-id="' + item.master_id + '" data-name="' + cleanName + '" data-issn="' + issn + '">' +
-                                   '<span style="display:block; font-weight:bold; color:var(--primary);">' + rawName + '</span>' +
-                                   '<small style="color:#666;">ISSN: ' + issn + '</small></div>';
+                            // Security Fix: Fully escape DOM insertions
+                            const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+                            const safeIssn = issn.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+                            return '<div class="autocomplete-item" data-id="' + item.master_id + '" data-name="' + safeName + '" data-issn="' + safeIssn + '">' +
+                                   '<span style="display:block; font-weight:bold; color:var(--primary);">' + safeName + '</span>' +
+                                   '<small style="color:#666;">ISSN: ' + safeIssn + '</small></div>';
                         }).join('');
                         dd.style.display = dd.innerHTML.trim() === '' ? 'none' : 'block';
                     } else { dd.style.display = 'none'; }
