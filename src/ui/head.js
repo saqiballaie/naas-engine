@@ -2,7 +2,8 @@ export function renderHead(title) {
   return `
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title} | NAAS Insights Engine</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="/app.js" defer></script>
     <style>
         :root { --primary: #0056b3; --primary-light: #e3f2fd; --accent: #ff8c00; --success: #28a745; --danger: #dc3545; --bg: #f4f6f8; --border: #dee2e6; --white: #ffffff; }
         * { box-sizing: border-box; }
