@@ -174,7 +174,7 @@ export default {
         const results = isSubmitted ? await db.searchJournals(env.DB, latestYear, search, min, max, page) : [];
 
         // UPDATED: Pass 'page' to the renderer
-        rreturn new Response(layout("Search Journals", renderSearchPage(search, min, max, results, isSubmitted, page), path), { 
+        return new Response(layout("Search Journals", renderSearchPage(search, min, max, results, isSubmitted, page), path), { 
             headers: { 
                 "Content-Type": "text/html",
                 ...secHeaders
