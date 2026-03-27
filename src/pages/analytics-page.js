@@ -1,12 +1,14 @@
+import { escapeHTML } from '../utils.js';
 export function renderAnalyticsPage(data) {
     if (!data || !data.history || data.history.length === 0) {
         return `<div class="card" style="text-align: center; padding: 50px;"><h2>No Data Found</h2><a href="/" class="btn">Return to Search</a></div>`;
     }
 
-    // 1. Prepare Chart Data
-    const chartLabels = JSON.stringify(data.history.map(row => row.year));
-    const chartData = JSON.stringify(data.history.map(row => row.rating));
-    const chartAvgData = JSON.stringify(data.history.map(() => data.avg_rating));
+    // 1. Prepare Chart Data (Security Fix: Prevent Script Breakout)
+    const secureStringify = (obj) => JSON.stringify(obj).replace(/</g, '\\u003c');
+    const chartLabels = secureStringify(data.history.map(row => row.year));
+    const chartData = secureStringify(data.history.map(row => row.rating));
+    const chartAvgData = secureStringify(data.history.map(() => data.avg_rating));
 
     // 2. Prepare Table Data (Yearly Change & Deviation)
     const enrichedHistory = data.history.map((row, index, arr) => {
