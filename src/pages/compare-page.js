@@ -19,7 +19,6 @@ export function renderComparePage(journals) {
         processedJournals.push({ ...j, color: chartColors[index], latestScore, avgScore, cv, publishScore, ratingsByYear });
     });
 
-    // FIXED: Properly scoped arrays for both Table and Chart to use on the server
     const sortedYearsDesc = Array.from(allYearsSet).sort((a, b) => b - a);
     const sortedYearsAsc = Array.from(allYearsSet).sort((a, b) => a - b);
 
@@ -42,10 +41,8 @@ export function renderComparePage(journals) {
     <div class="card" style="padding: 0; overflow: hidden;"><div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;"><h3 style="margin: 0; font-size: 16px; color: #334155;">10-Year Historical Data</h3></div><div class="table-responsive" style="border: none; border-radius: 0;"><table><thead><tr style="background: #ffffff;"><th style="color: #64748b; font-size: 12px; text-transform: uppercase; width: 80px;">Year</th>${processedJournals.map(j => `<th style="color: #1e293b; font-size: 12px;">${j.name}</th>`).join('')}</tr></thead><tbody>${sortedYearsDesc.map(year => `<tr><td style="font-weight: bold; color: #475569;">${year}</td>${processedJournals.map(j => {const rating = j.ratingsByYear[year]; return `<td style="color: ${rating ? '#334155' : '#cbd5e1'}; font-weight: ${rating ? '600' : 'normal'};">${rating ? rating.toFixed(2) : '-'}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div></div>` : ''}
 
 <script>
-       <script>
-        // Security Fix: Prevent script tag breakout
+        // Security Fix: Prevent Script tag breakout using unicode
         let selected = ${JSON.stringify(preselected).replace(/</g, '\\u003c')};
-        
         function updateUI() {
             const list = document.getElementById('selected-list'); const hidden = document.getElementById('hidden-inputs'); const searchInp = document.getElementById('compare-search');
             
@@ -71,7 +68,7 @@ export function renderComparePage(journals) {
                     const data = await res.json();
                     if(data.length > 0) {
                         dd.innerHTML = data.map(item => {
-                            if(selected.some(s => s.id == item.master_id)) return ''; // Hide already selected
+                            if(selected.some(s => s.id == item.master_id)) return ''; 
                             
                             const rawName = item.Name ? String(item.Name) : "Unknown";
                             const issn = item.ISSN || 'N/A';
@@ -79,7 +76,7 @@ export function renderComparePage(journals) {
                             // Security Fix: Fully escape DOM insertions
                             const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
                             const safeIssn = issn.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
+                            
                             return '<div class="autocomplete-item" data-id="' + item.master_id + '" data-name="' + safeName + '" data-issn="' + safeIssn + '">' +
                                    '<span style="display:block; font-weight:bold; color:var(--primary);">' + safeName + '</span>' +
                                    '<small style="color:#666;">ISSN: ' + safeIssn + '</small></div>';
@@ -89,7 +86,6 @@ export function renderComparePage(journals) {
                 } catch (err) { console.error("Autocomplete Error:", err); }
             });
 
-            // Event Delegation for clicking a compare result
             dd.addEventListener('click', (e) => {
                 const item = e.target.closest('.autocomplete-item');
                 if (item && selected.length < 5) {
@@ -112,11 +108,12 @@ export function renderComparePage(journals) {
             new Chart(document.getElementById('compareChart'), { 
                 type: 'line', 
                 data: { 
-                    labels: ${JSON.stringify(sortedYearsAsc)}, 
+                    // Security Fix: Unicode escaping for chart labels and data
+                    labels: ${JSON.stringify(sortedYearsAsc).replace(/</g, '\\u003c')}, 
                     datasets: ${JSON.stringify(processedJournals.map((j) => { 
                         const alignedData = sortedYearsAsc.map(y => j.ratingsByYear[y] || null); 
                         return { label: j.name, data: alignedData, borderColor: j.color, backgroundColor: j.color, tension: 0.1, pointRadius: 4, borderWidth: 2, spanGaps: true }; 
-                    }))} 
+                    })).replace(/</g, '\\u003c')} 
                 }, 
                 options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false } } 
             }); 
