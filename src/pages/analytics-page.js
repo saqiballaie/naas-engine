@@ -113,11 +113,11 @@ export function renderAnalyticsPage(data) {
     <div style="max-width: 900px; margin: 0 auto;">
         
         <div class="card" style="border-top: 5px solid var(--primary); margin-bottom: 20px; padding: 25px;">
-            <h2 style="margin: 0 0 15px 0; color: #0f172a; font-size: 26px;">${data.name}</h2>
+            <h2 style="margin: 0 0 15px 0; color: #0f172a; font-size: 26px;">${escapeHTML(data.name)}</h2>
             
             <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-bottom: 15px;">
                 <div style="font-family: monospace; font-size: 15px; color: #334155; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                    <strong>ISSN:</strong> ${data.issn}
+                    <strong>ISSN:</strong> ${escapeHTML(data.issn)}
                 </div>
                 
                 <a href="/" class="btn" style="background: #475569; padding: 6px 12px; font-size: 13px;">🔍 New Search</a>
