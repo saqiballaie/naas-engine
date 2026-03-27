@@ -1,10 +1,17 @@
 export function renderStatisticsPage(stats) {
-    const years = JSON.stringify(stats.yearlyTrends.map(d => d.year));
-    const avgs = JSON.stringify(stats.yearlyTrends.map(d => d.avg_rating.toFixed(2)));
+    // Prepare Data Attributes for Charts safely
+    const safeTrendLabels = escapeHTML(JSON.stringify(stats.yearlyTrends.map(d => d.year)));
+    const safeTrendDatasets = escapeHTML(JSON.stringify([{
+        label: 'Ecosystem Avg Rating', 
+        data: stats.yearlyTrends.map(d => d.avg_rating.toFixed(2)), 
+        borderColor: '#0056b3', backgroundColor: 'rgba(0, 86, 179, 0.1)', fill: true, tension: 0.3
+    }]));
     
-    // Format Tier Data for the Pie Chart
-    const tierLabels = JSON.stringify([...stats.distribution.map(d => d.tier), 'No Rating']);
-    const tierValues = JSON.stringify([...stats.distribution.map(d => d.count), stats.unratedCount]);
+    const safePieLabels = escapeHTML(JSON.stringify([...stats.distribution.map(d => d.tier), 'No Rating']));
+    const safePieDatasets = escapeHTML(JSON.stringify([{
+        data: [...stats.distribution.map(d => d.count), stats.unratedCount], 
+        backgroundColor: ['#1d4ed8', '#16a34a', '#ca8a04', '#dc2626', '#94a3b8']
+    }]));
 
     const totalActive = stats.distribution.reduce((sum, d) => sum + d.count, 0);
 
@@ -36,11 +43,15 @@ export function renderStatisticsPage(stats) {
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 25px;">
         <div class="card" style="margin: 0;">
             <h3 style="margin-top: 0; color: #334155;">Average Score Trend</h3>
-            <div style="height: 300px;"><canvas id="trendChart"></canvas></div>
+            <div style="height: 300px;">
+                <canvas id="trendChart" data-chart="true" data-chart-type="line" data-labels="${safeTrendLabels}" data-datasets="${safeTrendDatasets}"></canvas>
+            </div>
         </div>
         <div class="card" style="margin: 0;">
             <h3 style="margin-top: 0; color: #334155;">${stats.latestYear} Tier Distribution</h3>
-            <div style="height: 300px;"><canvas id="pieChart"></canvas></div>
+            <div style="height: 300px;">
+                <canvas id="pieChart" data-chart="true" data-chart-type="doughnut" data-labels="${safePieLabels}" data-datasets="${safePieDatasets}"></canvas>
+            </div>
         </div>
     </div>
 
@@ -139,44 +150,5 @@ export function renderStatisticsPage(stats) {
     <div style="margin-top: 30px; text-align: center; color: #64748b; font-size: 13px;">
         <p>💡 <em>Analytical Note: Top Gainers and Declines are calculated using the percentage change from their historical average to account for relative impact across different rating tiers.</em></p>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        setTimeout(() => {
-            // Average Score Trend Chart
-            new Chart(document.getElementById('trendChart'), { 
-                type: 'line', 
-                data: { 
-                    labels: ${years}, 
-                    datasets: [{
-                        label: 'Ecosystem Avg Rating', 
-                        data: ${avgs}, 
-                        borderColor: '#0056b3',
-                        backgroundColor: 'rgba(0, 86, 179, 0.1)',
-                        fill: true,
-                        tension: 0.3
-                    }] 
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-
-            // Tier Distribution Pie Chart
-            new Chart(document.getElementById('pieChart'), { 
-                type: 'doughnut', 
-                data: { 
-                    labels: ${tierLabels}, 
-                    datasets: [{
-                        data: ${tierValues}, 
-                        backgroundColor: ['#1d4ed8', '#16a34a', '#ca8a04', '#dc2626', '#94a3b8']
-                    }] 
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'right' } }
-                }
-            });
-        }, 150);
-    </script>
     `;
 }
